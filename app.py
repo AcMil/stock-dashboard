@@ -11,9 +11,9 @@ from datetime import datetime
 
 # מפתחות
 ANTHROPIC_API_KEY = st.secrets.get("ANTHROPIC_API_KEY", "")
-GMAIL_USER = "romank199018@gmail.com"
-GMAIL_PASSWORD = "exgvveglgicvwggk"
-ALERT_EMAIL = "romank199018@gmail.com"
+GMAIL_USER = st.secrets.get("GMAIL_USER", "")
+GMAIL_PASSWORD = st.secrets.get("GMAIL_PASSWORD", "")
+ALERT_EMAIL = st.secrets.get("ALERT_EMAIL", "")
 
 st.set_page_config(
     page_title="דשבורד מניות",
