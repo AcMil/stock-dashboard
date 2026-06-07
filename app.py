@@ -10,7 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
 # מפתחות
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+ANTHROPIC_API_KEY = st.secrets.get("ANTHROPIC_API_KEY", "")
 GMAIL_USER = "romank199018@gmail.com"
 GMAIL_PASSWORD = "exgvveglgicvwggk"
 ALERT_EMAIL = "romank199018@gmail.com"
