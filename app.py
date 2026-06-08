@@ -53,7 +53,24 @@ def get_yahoo_news(stock):
         return news
     except:
         return []
-
+def get_reddit_posts(stock, limit=5):
+    """שואב פוסטים מ-Reddit ללא API key"""
+    url = f"https://www.reddit.com/search.json?q={stock}+stock&limit={limit}&sort=new"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        data = response.json()
+        posts = []
+        for post in data["data"]["children"]:
+            p = post["data"]
+            posts.append({
+                "כותרת": p["title"],
+                "ציונים": p["score"],
+                "תגובות": p["num_comments"]
+            })
+        return posts
+    except:
+        return []
 def analyze_with_claude(stock, news, price, change):
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
