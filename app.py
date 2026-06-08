@@ -194,3 +194,17 @@ if news:
         st.write(f"📌 {item['כותרת']} — *{item['מקור']}*")
 else:
     st.warning("לא נמצאו חדשות")
+
+st.divider()
+st.subheader(f"💬 פוסטים מ-Reddit על {selected_stock}")
+with st.spinner("שואב פוסטים מ-Reddit..."):
+    reddit_posts = get_reddit_posts(selected_stock)
+
+if reddit_posts:
+    for post in reddit_posts:
+        with st.expander(post["כותרת"]):
+            col1, col2 = st.columns(2)
+            col1.metric("ציונים", post["ציונים"])
+            col2.metric("תגובות", post["תגובות"])
+else:
+    st.warning("לא נמצאו פוסטים מ-Reddit")
