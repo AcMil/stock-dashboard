@@ -25,7 +25,7 @@ st.markdown('<h1>📈 דשבורד מניות — ניתוח יומי</h1>', uns
 st.caption(f"עדכון אחרון: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 st.divider()
 
-STOCKS = ["AAPL", "TSLA", "NVDA", "MSFT", "AMZN"]
+STOCKS = ["AMZN", "ESLT", "FSLR", "IDR", "NVDA", "TSLA", "TSM"]
 
 def get_stock_info(stock):
     try:
