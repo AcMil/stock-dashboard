@@ -53,6 +53,21 @@ def get_yahoo_news(stock):
         return news
     except:
         return []
+        def get_finnhub_news(stock):
+    FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
+    url = f"https://finnhub.io/api/v1/company-news?symbol={stock}&from=2024-01-01&to=2099-01-01&token={FINNHUB_API_KEY}"
+    try:
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        news = []
+        for item in data[:5]:
+            news.append({
+                "כותרת": item.get("headline", ""),
+                "מקור": item.get("source", "Finnhub")
+            })
+        return news
+    except:
+        return []
 def get_reddit_posts(stock, limit=5):
     """שואב פוסטים מ-Reddit ללא API key"""
     url = f"https://www.reddit.com/search.json?q={stock}+stock&limit={limit}&sort=new"
