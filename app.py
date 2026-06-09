@@ -53,7 +53,7 @@ def get_yahoo_news(stock):
         return news
     except:
         return []
-        def get_finnhub_news(stock):
+      def get_finnhub_news(stock):
     FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
     url = f"https://finnhub.io/api/v1/company-news?symbol={stock}&from=2024-01-01&to=2099-01-01&token={FINNHUB_API_KEY}"
     try:
