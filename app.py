@@ -185,6 +185,8 @@ st.subheader(f"🧠 ניתוח Claude על {selected_stock}")
 with st.spinner("Claude מנתח..."):
     price, change = get_stock_info(selected_stock)
     news = get_yahoo_news(selected_stock)
+finnhub_news = get_finnhub_news(selected_stock)
+news = news + finnhub_news
 reddit_posts = get_reddit_posts(selected_stock)
 all_news = news + [{"כותרת": p["כותרת"], "מקור": "Reddit"} for p in reddit_posts]
 analysis = analyze_with_claude(selected_stock, all_news, price, change)
