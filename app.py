@@ -288,6 +288,34 @@ if score >= alert_threshold:
     sent = send_alert_email(selected_stock, analysis, price, change)
     if sent:
         st.success("✅ מייל נשלח בהצלחה!")
+st.divider()
+
+st.markdown('<div class="section-title">המלצות לכל המניות</div>', unsafe_allow_html=True)
+rec_cols = st.columns(len(selected_stocks))
+for i, stock in enumerate(selected_stocks):
+    price, change = get_stock_info(stock)
+    if price:
+        news_tmp = get_yahoo_news(stock)
+        analysis_tmp = analyze_with_claude(stock, news_tmp, price, change)
+        rec_tmp = extract_recommendation(analysis_tmp)
+        score_tmp = extract_score(analysis_tmp)
+        badge = "badge-buy" if rec_tmp == "קנה" else "badge-sell" if rec_tmp == "מכור" else "badge-hold"
+        arrow = "▲" if change >= 0 else "▼"
+        delta_class = "metric-up" if change >= 0 else "metric-dn"
+        rec_cols[i].markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">{stock}</div>
+            <div class="metric-value">${price}</div>
+            <div class="{delta_class}">{arrow} {change}%</div>
+            <div style="margin-top:8px">
+                <div class="strack-wrap" style="height:3px;background:rgba(0,200,0,0.15);border-radius:2px;margin-bottom:6px">
+                    <div style="width:{score_tmp*10}%;height:100%;background:{'#4ade80' if score_tmp>=7 else '#fb923c' if score_tmp>=5 else '#f87171'};border-radius:2px"></div>
+                </div>
+                <span class="{badge}">{rec_tmp}</span>
+                <span style="font-size:11px;color:#00aa00;margin-right:6px">{score_tmp}/10</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 st.divider()
 
