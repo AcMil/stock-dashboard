@@ -27,15 +27,10 @@ html, body, [class*="css"] {
 
 .stApp {
     background-color: #000000;
-}
-
-canvas#matrix-bg {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 0;
-    pointer-events: none;
-    opacity: 0.18;
+    background-image: 
+        linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px);
+    background-size: 14px 14px;
 }
 
 .block-container {
@@ -47,53 +42,61 @@ h1, h2, h3 {
     color: #00ff41 !important;
     font-family: 'Share Tech Mono', monospace !important;
     text-align: right;
+    text-shadow: 0 0 8px #00ff41;
 }
 
 .metric-card {
-    background: rgba(0,0,0,0.75);
-    border: 0.5px solid rgba(0,200,0,0.3);
+    background: rgba(0, 15, 0, 0.85);
+    border: 1px solid rgba(0,255,65,0.4);
     border-radius: 10px;
     padding: 14px 16px;
     text-align: right;
+    box-shadow: inset 0 0 20px rgba(0,255,65,0.05);
 }
 
 .metric-label {
     font-size: 11px;
-    color: #00aa00;
+    color: #00cc33;
     letter-spacing: 0.05em;
     margin-bottom: 4px;
+    font-family: 'Share Tech Mono', monospace;
 }
 
 .metric-value {
     font-size: 24px;
     font-weight: 500;
     color: #00ff41;
+    font-family: 'Share Tech Mono', monospace;
+    text-shadow: 0 0 6px rgba(0,255,65,0.5);
 }
 
-.metric-up { color: #4ade80; font-size: 13px; }
-.metric-dn { color: #f87171; font-size: 13px; }
+.metric-up { color: #4ade80; font-size: 13px; text-shadow: 0 0 4px rgba(74,222,128,0.5); }
+.metric-dn { color: #f87171; font-size: 13px; text-shadow: 0 0 4px rgba(248,113,113,0.5); }
 
 .analysis-card {
-    background: rgba(0,0,0,0.75);
-    border: 0.5px solid rgba(0,200,0,0.3);
+    background: rgba(0, 15, 0, 0.85);
+    border: 1px solid rgba(0,255,65,0.4);
     border-radius: 10px;
     padding: 1rem 1.25rem;
     margin-bottom: 12px;
     text-align: right;
-    color: #00bb33;
-    line-height: 1.6;
+    color: #00ee44;
+    line-height: 1.8;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
 }
 
-.badge-buy   { background:#14532d; color:#4ade80; border:0.5px solid #00cc00; padding:3px 12px; border-radius:6px; font-size:12px; }
-.badge-hold  { background:#451a03; color:#fb923c; border:0.5px solid #fb923c; padding:3px 12px; border-radius:6px; font-size:12px; }
-.badge-sell  { background:#450a0a; color:#f87171; border:0.5px solid #f87171; padding:3px 12px; border-radius:6px; font-size:12px; }
+.badge-buy  { background:#14532d; color:#4ade80; border:1px solid #00cc00; padding:4px 14px; border-radius:6px; font-size:12px; font-family:monospace; }
+.badge-hold { background:#451a03; color:#fb923c; border:1px solid #fb923c; padding:4px 14px; border-radius:6px; font-size:12px; font-family:monospace; }
+.badge-sell { background:#450a0a; color:#f87171; border:1px solid #f87171; padding:4px 14px; border-radius:6px; font-size:12px; font-family:monospace; }
 
 .news-item {
     padding: 8px 0;
-    border-bottom: 0.5px solid rgba(0,200,0,0.15);
-    color: #00bb33;
+    border-bottom: 0.5px solid rgba(0,255,65,0.15);
+    color: #00cc33;
     font-size: 13px;
     text-align: right;
+    font-family: 'Share Tech Mono', monospace;
 }
 
 .section-title {
@@ -104,34 +107,17 @@ h1, h2, h3 {
     letter-spacing: 0.07em;
     margin-bottom: 10px;
     text-align: right;
+    font-family: 'Share Tech Mono', monospace;
 }
-</style>
 
-<canvas id="matrix-bg"></canvas>
-<script>
-const c = document.getElementById('matrix-bg');
-const ctx = c.getContext('2d');
-function resize(){ c.width = window.innerWidth; c.height = window.innerHeight; }
-resize();
-window.addEventListener('resize', resize);
-const fs = 13;
-const cols = Math.floor(c.width / fs);
-const drops = Array.from({length: cols}, () => Math.random() * -80);
-const chars = '01アイウエオ0110NVDATSLAAMZN$%+-0.450.83';
-function draw(){
-    ctx.fillStyle = 'rgba(0,0,0,0.04)';
-    ctx.fillRect(0, 0, c.width, c.height);
-    drops.forEach((y, i) => {
-        const ch = chars[Math.floor(Math.random() * chars.length)];
-        ctx.fillStyle = Math.random() > 0.93 ? '#afffaf' : '#00cc00';
-        ctx.font = fs + 'px monospace';
-        ctx.fillText(ch, i * fs, y * fs);
-        if(y * fs > c.height && Math.random() > 0.97) drops[i] = 0;
-        drops[i] += 0.6;
-    });
+[data-testid="stSidebar"] {
+    background-color: rgba(0, 10, 0, 0.95) !important;
+    border-left: 1px solid rgba(0,255,65,0.2);
 }
-setInterval(draw, 30);
-</script>
+
+[data-testid="stMetricValue"] { color: #00ff41 !important; }
+[data-testid="stMetricDelta"] { color: #4ade80 !important; }
+</style>
 """, unsafe_allow_html=True)
 
 st.markdown('<h1 style="text-align:right">📈 דשבורד מניות — ניתוח יומי</h1>', unsafe_allow_html=True)
