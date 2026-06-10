@@ -3,3 +3,4 @@ yfinance
 requests
 anthropic
 pandas
+plotly
