@@ -57,7 +57,8 @@ def get_finnhub_news(stock):
         return news
     except:
         return []
-        def get_reddit_posts(stock, limit=5):
+
+def get_reddit_posts(stock, limit=5):
     url = f"https://www.reddit.com/search.json?q={stock}+stock&limit={limit}&sort=new"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     try:
@@ -123,7 +124,8 @@ def send_alert_email(stock, analysis, price, change):
     except Exception as e:
         st.error(f"שגיאה בשליחת מייל: {e}")
         return False
-        with st.sidebar:
+
+with st.sidebar:
     st.header("⚙️ הגדרות")
     stocks_input = st.text_area("מניות (אחת בשורה):", value="\n".join(STOCKS))
     selected_stocks = [s.strip() for s in stocks_input.split("\n") if s.strip()]
