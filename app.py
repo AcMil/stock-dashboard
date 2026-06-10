@@ -319,6 +319,48 @@ for i, stock in enumerate(selected_stocks):
 
 st.divider()
 
+st.markdown(f'<div class="section-title">גרף שנה אחרונה — {selected_stock}</div>', unsafe_allow_html=True)
+
+try:
+    import plotly.graph_objects as go
+    hist = yf.Ticker(selected_stock).history(period="1y")
+    if not hist.empty:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=hist.index,
+            y=hist['Close'],
+            mode='lines',
+            line=dict(color='#00ff41', width=1.5),
+            fill='tozeroy',
+            fillcolor='rgba(0,255,65,0.05)',
+            name=selected_stock
+        ))
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,15,0,0.85)',
+            font=dict(color='#00aa00', family='monospace'),
+            margin=dict(l=40, r=20, t=20, b=40),
+            height=300,
+            xaxis=dict(
+                gridcolor='rgba(0,255,65,0.1)',
+                showgrid=True,
+                color='#00aa00'
+            ),
+            yaxis=dict(
+                gridcolor='rgba(0,255,65,0.1)',
+                showgrid=True,
+                color='#00aa00'
+            ),
+            showlegend=False
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("לא נמצאו נתונים היסטוריים")
+except Exception as e:
+    st.warning(f"שגיאה בטעינת גרף: {e}")
+
+st.divider()
+
 st.markdown('<div class="section-title">חדשות אחרונות</div>', unsafe_allow_html=True)
 if news:
     for item in news:
