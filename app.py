@@ -253,14 +253,23 @@ with st.sidebar:
         st.rerun()
 
 st.markdown('<div class="section-title">מחירים עכשוויים</div>', unsafe_allow_html=True)
-cols = st.columns(len(selected_stocks), gap="small")
-for i, stock in enumerate(selected_stocks):
-    price, change = get_stock_info(stock)
-    if price:
-        delta_class = "metric-up" if change >= 0 else "metric-dn"
-        arrow = "▲" if change >= 0 else "▼"
-        cols[i].markdown(f"""
-        <div class="metric-card">
+n = len(selected_stocks)
+cols_per_row = 2 if n > 4 else n
+rows = [selected_stocks[i:i+cols_per_row] for i in range(0, n, cols_per_row)]
+for row_stocks in rows:
+    cols = st.columns(len(row_stocks), gap="small")
+    for i, stock in enumerate(row_stocks):
+        price, change = get_stock_info(stock)
+        if price:
+            delta_class = "metric-up" if change >= 0 else "metric-dn"
+            arrow = "▲" if change >= 0 else "▼"
+            cols[i].markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">{stock}</div>
+                <div class="metric-value">${price}</div>
+                <div class="{delta_class}">{arrow} {change}%</div>
+            </div>
+            """, unsafe_allow_html=True)
             <div class="metric-label">{stock}</div>
             <div class="metric-value">${price}</div>
             <div class="{delta_class}">{arrow} {change}%</div>
