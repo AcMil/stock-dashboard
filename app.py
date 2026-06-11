@@ -270,11 +270,6 @@ for row_stocks in rows:
                 <div class="{delta_class}">{arrow} {change}%</div>
             </div>
             """, unsafe_allow_html=True)
-            <div class="metric-label">{stock}</div>
-            <div class="metric-value">${price}</div>
-            <div class="{delta_class}">{arrow} {change}%</div>
-        </div>
-        """, unsafe_allow_html=True)
 
 st.divider()
 
