@@ -240,17 +240,19 @@ def send_alert_email(stock, analysis, price, change):
         st.error(f"שגיאה בשליחת מייל: {e}")
         return False
 
-with st.sidebar:
-    st.markdown('<p style="color:#00ff41;font-size:16px;font-weight:500;text-align:right">⚙️ הגדרות</p>', unsafe_allow_html=True)
-    stocks_input = st.text_area("מניות (אחת בשורה):", value="\n".join(STOCKS))
-    selected_stocks = [s.strip() for s in stocks_input.split("\n") if s.strip()]
-    st.divider()
-    selected_stock = st.selectbox("🔍 בחר מניה:", selected_stocks)
-    st.divider()
-    alert_threshold = st.slider("🔔 שלח התראה כשציון מעל:", 1, 10, 7)
-    st.divider()
-    if st.button("🔄 רענן", use_container_width=True):
-        st.rerun()
+with st.expander("⚙️ הגדרות", expanded=False):
+    col_s1, col_s2, col_s3 = st.columns(3)
+    with col_s1:
+        stocks_input = st.text_area("מניות (אחת בשורה):", value="\n".join(STOCKS), height=150)
+        selected_stocks = [s.strip() for s in stocks_input.split("\n") if s.strip()]
+    with col_s2:
+        selected_stock = st.selectbox("🔍 בחר מניה:", selected_stocks)
+        alert_threshold = st.slider("🔔 התראה כשציון מעל:", 1, 10, 7)
+    with col_s3:
+        st.write("")
+        st.write("")
+        if st.button("🔄 רענן", use_container_width=True):
+            st.rerun()
 
 st.markdown('<div class="section-title">מחירים עכשוויים</div>', unsafe_allow_html=True)
 n = len(selected_stocks)
