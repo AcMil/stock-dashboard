@@ -206,8 +206,10 @@ def extract_score(analysis):
     try:
         for line in analysis.split("\n"):
             if "ציון סנטימנט" in line:
-                score = int(''.join(filter(str.isdigit, line)))
-                return score
+                import re
+                numbers = re.findall(r'\b([1-9]|10)\b', line)
+                if numbers:
+                    return int(numbers[0])
     except:
         pass
     return 0
@@ -251,7 +253,7 @@ with st.sidebar:
         st.rerun()
 
 st.markdown('<div class="section-title">מחירים עכשוויים</div>', unsafe_allow_html=True)
-cols = st.columns(len(selected_stocks))
+cols = st.columns(len(selected_stocks), gap="small")
 for i, stock in enumerate(selected_stocks):
     price, change = get_stock_info(stock)
     if price:
