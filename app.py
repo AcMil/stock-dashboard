@@ -123,7 +123,7 @@ h1, h2, h3 {
 """, unsafe_allow_html=True)
 
 st.markdown('''
-<h1 style="text-align:right; font-size:clamp(1.2rem, 5vw, 2.2rem)">
+<h1 style="text-align:right; font-size:clamp(1rem, 4vw, 2.2rem); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
 📈 דשבורד מניות — ניתוח יומי
 </h1>
 ''', unsafe_allow_html=True)
