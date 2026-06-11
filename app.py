@@ -49,9 +49,11 @@ h1, h2, h3 {
     background: rgba(0, 15, 0, 0.85);
     border: 1px solid rgba(0,255,65,0.4);
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 12px;
     text-align: right;
     box-shadow: inset 0 0 20px rgba(0,255,65,0.05);
+    width: 100%;
+}
 }
 
 .metric-label {
@@ -120,7 +122,11 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<h1 style="text-align:right">📈 דשבורד מניות — ניתוח יומי</h1>', unsafe_allow_html=True)
+st.markdown('''
+<h1 style="text-align:right; font-size:clamp(1.2rem, 5vw, 2.2rem)">
+📈 דשבורד מניות — ניתוח יומי
+</h1>
+''', unsafe_allow_html=True)
 st.markdown(f'<p style="color:#00aa00;text-align:right">עדכון אחרון: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>', unsafe_allow_html=True)
 st.divider()
 
