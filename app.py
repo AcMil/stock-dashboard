@@ -393,3 +393,145 @@ if reddit_posts:
             col2.metric("תגובות", post["תגובות"])
 else:
     st.warning("לא נמצאו פוסטים מ-Reddit")
+# ===================================================
+# הוסף את הקוד הזה לדשבורד הקיים שלך
+# מקום: אחרי שורת "st.divider()" האחרונה בקוד
+# ===================================================
+
+import gspread
+from google.oauth2.service_account import Credentials
+
+SHEET_ID = "1c0K0xmckLlYRmApGzqb6GETxFfpk2onBrGTmpdjMh08"
+
+def get_sheet_data(sheet_name):
+    """שולף נתונים מ-Google Sheets"""
+    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+    try:
+        df = pd.read_csv(url)
+        df = df.dropna(how='all')
+        return df
+    except Exception as e:
+        return pd.DataFrame()
+
+def parse_insider_json(df):
+    """מפענח את נתוני JSON שClaude מחזיר"""
+    import json, re
+    parsed_rows = []
+    for _, row in df.iterrows():
+        raw = str(row.iloc[0])
+        match = re.search(r'\{[\s\S]*\}', raw)
+        if match:
+            try:
+                data = json.loads(match.group())
+                parsed_rows.append(data)
+            except:
+                pass
+    return pd.DataFrame(parsed_rows) if parsed_rows else pd.DataFrame()
+
+
+# ===================================================
+# סעיף 1: כניסות אנשי פנים
+# ===================================================
+st.divider()
+st.markdown('<div class="section-title">👤 רכישות אנשי פנים — SEC EDGAR Form 4</div>', unsafe_allow_html=True)
+st.markdown('''
+<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+מדוע זה חשוב: כשמנכ"ל קונה מניות בכסף שלו — זה הסיגנל החזק ביותר שיש. הוא יודע יותר מכולם.
+</div>
+''', unsafe_allow_html=True)
+
+insider_df_raw = get_sheet_data("Insider Trades")
+if insider_df_raw.empty:
+    st.markdown('<div class="news-item">⏳ אין נתונים עדיין — המערכת תעדכן בוקר ב-08:00</div>', unsafe_allow_html=True)
+else:
+    insider_df = parse_insider_json(insider_df_raw)
+    if not insider_df.empty:
+        for _, row in insider_df.iterrows():
+            ticker = row.get('ticker', '—')
+            company = row.get('company_name', '—')
+            insider = row.get('insider_name', '—')
+            title = row.get('title', '—')
+            tx_type = row.get('transaction_type', '—')
+            amount = row.get('amount', '—')
+            desc = row.get('description', '—')
+            signal = row.get('signal_strength', 5)
+            badge = "badge-buy" if "Buy" in str(tx_type) else "badge-sell"
+            label = "קנה" if "Buy" in str(tx_type) else "מכור"
+            st.markdown(f'''
+            <div class="metric-card" style="margin-bottom:10px">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                    <span style="font-size:18px; color:#00ff41; font-family:monospace">{ticker}</span>
+                    <span class="{badge}">{label}</span>
+                </div>
+                <div style="color:#00aa00; font-size:12px; margin-bottom:4px">🏢 {company} | 👤 {insider} — {title}</div>
+                <div style="color:#00cc33; font-size:13px; margin-bottom:6px">💰 {amount}</div>
+                <div style="color:#008800; font-size:12px">{desc}</div>
+                <div style="margin-top:8px">
+                    <div style="height:3px; background:rgba(0,200,0,0.15); border-radius:2px">
+                        <div style="width:{int(signal)*10}%; height:100%; background:#00ff41; border-radius:2px"></div>
+                    </div>
+                    <span style="font-size:11px; color:#00aa00">עוצמת איתות: {signal}/10</span>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="news-item">⏳ הנתונים יתעדכנו בוקר ב-08:00</div>', unsafe_allow_html=True)
+
+
+# ===================================================
+# סעיף 2: נפח מסחר חריג
+# ===================================================
+st.divider()
+st.markdown('<div class="section-title">📈 נפח מסחר חריג — Finnhub</div>', unsafe_allow_html=True)
+st.markdown('''
+<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+מדוע זה חשוב: פתאום פי 3+ מהנפח הרגיל = מישהו גדול נכנס לפני חדשות.
+</div>
+''', unsafe_allow_html=True)
+
+volume_df = get_sheet_data("Volume Alerts")
+if volume_df.empty:
+    st.markdown('<div class="news-item">⏳ אין נתונים עדיין — המערכת תעדכן בוקר ב-08:00</div>', unsafe_allow_html=True)
+else:
+    for _, row in volume_df.iterrows():
+        ticker = row.get('Ticker', '—')
+        company = row.get('Company Name', '—')
+        ratio = row.get('Volume Ratio', '—')
+        analysis = row.get('Claude Analysis', '—')
+        st.markdown(f'''
+        <div class="metric-card" style="margin-bottom:10px">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <span style="font-size:18px; color:#00ff41; font-family:monospace">{ticker}</span>
+                <span class="badge-sell">פי {ratio} מהממוצע</span>
+            </div>
+            <div style="color:#00aa00; font-size:12px; margin-top:4px">🏢 {company}</div>
+            <div style="color:#008800; font-size:12px; margin-top:4px">{analysis}</div>
+        </div>
+        ''', unsafe_allow_html=True)
+
+
+# ===================================================
+# סעיף 3: אירועים קרובים
+# ===================================================
+st.divider()
+st.markdown('<div class="section-title">📅 אירועים קרובים — Finnhub</div>', unsafe_allow_html=True)
+
+events_df = get_sheet_data("Upcoming Events")
+if events_df.empty:
+    st.markdown('<div class="news-item">⏳ אין אירועים קרובים — המערכת תעדכן בוקר ב-08:00</div>', unsafe_allow_html=True)
+else:
+    for _, row in events_df.iterrows():
+        date = row.get('Event Date', '—')
+        ticker = row.get('Ticker', '—')
+        event_type = row.get('Event Type', '—')
+        desc = row.get('Description', '—')
+        importance = row.get('Importance', 'medium')
+        badge_cls = "badge-sell" if importance == 'high' else "badge-hold" if importance == 'medium' else "badge-buy"
+        st.markdown(f'''
+        <div class="news-item">
+            📌 <span style="color:#00ff41; font-family:monospace">{ticker}</span> — {event_type}: {desc}
+            <span style="color:#00aa00; font-size:11px"> | {date}</span>
+            <span class="{badge_cls}" style="margin-right:8px; font-size:11px">{importance}</span>
+        </div>
+        ''', unsafe_allow_html=True)
+
