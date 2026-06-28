@@ -398,8 +398,6 @@ else:
 # מקום: אחרי שורת "st.divider()" האחרונה בקוד
 # ===================================================
 
-import gspread
-from google.oauth2.service_account import Credentials
 
 SHEET_ID = "1c0K0xmckLlYRmApGzqb6GETxFfpk2onBrGTmpdjMh08"
 
