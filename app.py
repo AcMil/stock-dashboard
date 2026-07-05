@@ -825,9 +825,89 @@ def get_upcoming_events(tickers, days=21):
     events.sort(key=lambda x: x["date"])
     return events
 
-# ---------- סיכום: לוגיקת שקלול איתותים ----------
-# הערה: מ-1.8, כשה-API חוזר, מחליפים רק את הפונקציה הזו
-# בקריאה ל-Claude — שאר הדשבורד לא משתנה.
+# ---------- סיכום: ניתוח Claude (עם גיבוי לוגי) ----------
+# Claude מקבל את כל האיתותים שנאספו ומחזיר המלצה לכל מניה.
+# התוצאה נשמרת במטמון לשעה כדי לחסוך בעלויות API.
+# אם הקריאה נכשלת — עוברים אוטומטית ללוגיקת השקלול המקומית.
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def claude_portfolio_summary(signals_json):
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        prompt = f"""אתה אנליסט תיק השקעות. קיבלת איתותים שנאספו אוטומטית ממקורות רשמיים (SEC, נתוני נפח, לוח דוחות) עבור מניות בתיק.
+
+האיתותים (JSON):
+{signals_json}
+
+הנחיות:
+- עסקת קנייה של איש פנים (במיוחד מנכ"ל/סמנכ"ל כספים) היא איתות חיובי חזק. מכירה היא איתות חלש בלבד (מנהלים מוכרים מסיבות רבות).
+- נפח חריג + דוח קרוב + קניית אנשי פנים = איתותים חופפים שמחזקים זה את זה.
+- 8-K על תוצאות כספיות או שינוי הנהלה — שים לב להקשר.
+- היה שמרן: אם אין איתותים מהותיים, ההמלצה היא "החזק".
+
+החזר אך ורק מערך JSON תקין, בלי טקסט לפני או אחרי, בפורמט:
+[{{"ticker": "XXX", "label": "הגדל|היזהר|עקוב|החזק", "rec": "משפט המלצה קצר בעברית", "reasons": "האיתותים המרכזיים בקצרה"}}]
+כלול את כל המניות שברשימה."""
+        message = client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = message.content[0].text
+        import re as _re
+        match = _re.search(r'\[[\s\S]*\]', text)
+        if not match:
+            return None
+        parsed = json.loads(match.group())
+        out = []
+        badge_map = {"הגדל": "badge-buy", "היזהר": "badge-sell",
+                     "עקוב": "badge-hold", "החזק": "badge-buy"}
+        for item in parsed:
+            label = item.get("label", "החזק")
+            out.append({
+                "ticker": str(item.get("ticker", "")).upper(),
+                "label": label,
+                "badge": badge_map.get(label, "badge-hold"),
+                "rec": item.get("rec", ""),
+                "reasons": item.get("reasons", ""),
+                "n_signals": None, "score": 0,
+            })
+        return out if out else None
+    except Exception:
+        return None
+
+def build_signals_json(tickers, insider, congress, filings_8k, volume, events, fg_score):
+    """אורז את כל האיתותים ל-JSON קומפקטי עבור Claude"""
+    data = {"fear_greed": fg_score, "stocks": {}}
+    for t in tickers:
+        t = t.upper()
+        data["stocks"][t] = {
+            "insider": [
+                {"name": x["owner"], "title": x["title"], "date": x["date"],
+                 "action": "buy" if x["is_buy"] else "sell",
+                 "value_usd": round(x["value"])}
+                for x in insider if x["ticker"] == t
+            ][:4],
+            "congress": [
+                {"name": x["name"], "date": x["date"],
+                 "action": "buy" if x["is_buy"] else "sell" if x.get("is_sell") else "other"}
+                for x in congress if x["ticker"] == t
+            ][:4],
+            "filings_8k": [
+                {"date": x["date"], "items": x["items"]}
+                for x in filings_8k if x["ticker"] == t
+            ][:3],
+            "unusual_volume": next(
+                ({"ratio": x["ratio"], "day_change_pct": x["change"]}
+                 for x in volume if x["ticker"] == t), None),
+            "upcoming_events": [
+                {"date": x["date"], "type": x["type"]}
+                for x in events if x["ticker"] == t
+            ][:2],
+        }
+    return json.dumps(data, ensure_ascii=False, sort_keys=True)
+
+# ---------- סיכום: לוגיקת שקלול איתותים (גיבוי) ----------
 
 def build_summary(tickers, insider, congress, filings_8k, volume, events):
     week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -911,10 +991,18 @@ with st.spinner("אוסף איתותים מ-SEC, Finnhub ומקורות נוספ
     congress_trades, congress_source = get_congress_trades(selected_stocks)
     volume_alerts = get_volume_anomalies(selected_stocks)
     upcoming_events = get_upcoming_events(selected_stocks)
-    portfolio_summary = build_summary(
+    signals_json = build_signals_json(
         selected_stocks, insider_trades, congress_trades,
-        filings_8k, volume_alerts, upcoming_events,
+        filings_8k, volume_alerts, upcoming_events, fg_score,
     )
+    portfolio_summary = claude_portfolio_summary(signals_json)
+    summary_source = "Claude"
+    if not portfolio_summary:
+        portfolio_summary = build_summary(
+            selected_stocks, insider_trades, congress_trades,
+            filings_8k, volume_alerts, upcoming_events,
+        )
+        summary_source = "לוגיקה מקומית (Claude לא זמין כרגע)"
 
 week_ago_str = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
 new_signals = (
@@ -1098,15 +1186,16 @@ else:
 # ---------- 6. סיכום — מה לעשות עם התיק ----------
 
 st.divider()
-st.markdown('<div class="section-title">💼 סיכום — שקלול כל האיתותים לפי מניה</div>', unsafe_allow_html=True)
-st.markdown('''
+st.markdown('<div class="section-title">💼 סיכום Claude — מה לעשות עם התיק שלי</div>', unsafe_allow_html=True)
+st.markdown(f'''
 <div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
-זו המלצה המבוססת על ספירת האיתותים שנאספו — לא ייעוץ פיננסי. ההחלטה הסופית תמיד שלך.
-(החל מ-1.8 הסעיף הזה ישודרג לניתוח Claude מלא)
+ניתוח המשלב את כל האיתותים שנאספו — לא ייעוץ פיננסי. ההחלטה הסופית תמיד שלך.
+מקור הניתוח: {summary_source} · מתעדכן אחת לשעה
 </div>
 ''', unsafe_allow_html=True)
 
 for s in portfolio_summary:
+    extra = f' — {s["n_signals"]} איתותים' if s.get("n_signals") is not None else ""
     st.markdown(f'''
     <div class="metric-card" style="margin-bottom:10px">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
@@ -1114,6 +1203,6 @@ for s in portfolio_summary:
             <span class="{s["badge"]}">{s["label"]}</span>
         </div>
         <div style="color:#00cc33; font-size:14px; margin-bottom:4px">{s["rec"]}</div>
-        <div style="color:#008800; font-size:12px">{s["reasons"]} — {s["n_signals"]} איתותים</div>
+        <div style="color:#008800; font-size:12px">{s["reasons"]}{extra}</div>
     </div>
     ''', unsafe_allow_html=True)
