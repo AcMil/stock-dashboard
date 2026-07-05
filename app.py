@@ -615,14 +615,56 @@ def get_8k_filings(tickers, days=14):
 @st.cache_data(ttl=21600, show_spinner=False)
 def get_congress_trades(tickers, days=90):
     """
-    עסקאות של חברי קונגרס. מקורות לא-רשמיים (חינמיים) —
-    עלולים להתעדכן באיחור או להפסיק לעבוד.
+    עסקאות של חברי קונגרס.
+    מקור 1: Finnhub (עם המפתח הקיים). מקורות גיבוי: לא-רשמיים.
     """
     tick_set = {t.upper() for t in tickers}
     cutoff = datetime.now() - timedelta(days=days)
     trades = []
 
-    # מקור 1: Capitol Trades (API לא רשמי)
+    # מקור 1: Finnhub — congressional-trading
+    if FINNHUB_API_KEY:
+        from_date = cutoff.strftime("%Y-%m-%d")
+        to_date = datetime.now().strftime("%Y-%m-%d")
+        for t in tick_set:
+            try:
+                r = requests.get(
+                    "https://finnhub.io/api/v1/stock/congressional-trading",
+                    params={"symbol": t, "from": from_date, "to": to_date,
+                            "token": FINNHUB_API_KEY},
+                    timeout=10,
+                )
+                if r.status_code != 200:
+                    continue
+                for it in (r.json() or {}).get("data", []) or []:
+                    tx_type = str(it.get("transactionType", "")).lower()
+                    amt_from = it.get("amountFrom")
+                    amt_to = it.get("amountTo")
+                    amount = ""
+                    try:
+                        if amt_from and amt_to:
+                            amount = f"${int(amt_from):,}–${int(amt_to):,}"
+                    except (ValueError, TypeError):
+                        pass
+                    pos = str(it.get("position", ""))
+                    role = "סנאט" if "senat" in pos.lower() else "בית הנבחרים" if pos else ""
+                    trades.append({
+                        "ticker": t,
+                        "name": it.get("name", "חבר קונגרס"),
+                        "role": role,
+                        "date": str(it.get("transactionDate", ""))[:10],
+                        "is_buy": "purchase" in tx_type or "buy" in tx_type,
+                        "is_sell": "sale" in tx_type or "sell" in tx_type,
+                        "amount": amount,
+                    })
+                time.sleep(0.1)
+            except Exception:
+                continue
+        if trades:
+            trades.sort(key=lambda x: x["date"], reverse=True)
+            return trades, "Finnhub"
+
+    # מקור 2: Capitol Trades (API לא רשמי)
     for t in tick_set:
         for fmt in (f"{t}:US", t):
             try:
@@ -664,7 +706,7 @@ def get_congress_trades(tickers, days=90):
         trades.sort(key=lambda x: x["date"], reverse=True)
         return trades, "Capitol Trades (לא רשמי)"
 
-    # מקור 2 (גיבוי): Senate Stock Watcher
+    # מקור 3 (גיבוי אחרון, סנאט בלבד): Senate Stock Watcher
     try:
         r = requests.get(
             "https://senate-stock-watcher-data.s3-us-west-2.amazonaws.com/aggregate/all_transactions.json",
