@@ -4,3 +4,4 @@ requests
 anthropic
 pandas
 plotly
+lxml
