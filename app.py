@@ -234,6 +234,20 @@ def extract_recommendation(analysis):
             if "החזק" in line: return "החזק"
     return "החזק"
 
+# ניתוח Claude עם מטמון של שעה — קריאת API אחת לשעה לכל מניה
+# במקום קריאה בכל רענון דף. חיסכון של ~90% בעלויות.
+@st.cache_data(ttl=3600, show_spinner=False)
+def cached_claude_analysis(stock, full_context=False):
+    price, change = get_stock_info(stock)
+    news_items = get_yahoo_news(stock)
+    if full_context:
+        news_items = news_items + get_finnhub_news(stock)
+        news_items = news_items + [
+            {"כותרת": p["כותרת"], "מקור": "Reddit"}
+            for p in get_reddit_posts(stock)
+        ]
+    return analyze_with_claude(stock, news_items, price, change)
+
 def send_alert_email(stock, analysis, price, change):
     try:
         msg = MIMEMultipart()
@@ -294,8 +308,7 @@ with st.spinner("Claude מנתח..."):
     finnhub_news = get_finnhub_news(selected_stock)
     news = news + finnhub_news
     reddit_posts = get_reddit_posts(selected_stock)
-    all_news = news + [{"כותרת": p["כותרת"], "מקור": "Reddit"} for p in reddit_posts]
-    analysis = analyze_with_claude(selected_stock, all_news, price, change)
+    analysis = cached_claude_analysis(selected_stock, full_context=True)
 
 rec = extract_recommendation(analysis)
 badge_class = "badge-buy" if rec == "קנה" else "badge-sell" if rec == "מכור" else "badge-hold"
@@ -315,8 +328,7 @@ rec_cols = st.columns(len(selected_stocks))
 for i, stock in enumerate(selected_stocks):
     price, change = get_stock_info(stock)
     if price:
-        news_tmp = get_yahoo_news(stock)
-        analysis_tmp = analyze_with_claude(stock, news_tmp, price, change)
+        analysis_tmp = cached_claude_analysis(stock)
         rec_tmp = extract_recommendation(analysis_tmp)
         score_tmp = extract_score(analysis_tmp)
         badge = "badge-buy" if rec_tmp == "קנה" else "badge-sell" if rec_tmp == "מכור" else "badge-hold"
