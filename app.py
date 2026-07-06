@@ -134,6 +134,43 @@ st.markdown('''
 📈 דשבורד מניות — ניתוח יומי
 </h1>
 ''', unsafe_allow_html=True)
+
+# ============================================================
+# 🔒 מסך כניסה — שם משתמש וסיסמה מוגדרים ב-Secrets:
+# DASHBOARD_USER = "שם_משתמש"
+# DASHBOARD_PASSWORD = "סיסמה_חזקה"
+# ============================================================
+
+import hmac
+
+def check_login():
+    if st.session_state.get("authenticated"):
+        return True
+
+    valid_user = str(st.secrets.get("DASHBOARD_USER", ""))
+    valid_pass = str(st.secrets.get("DASHBOARD_PASSWORD", ""))
+    if not valid_user or not valid_pass:
+        st.error("🔒 הכניסה לא הוגדרה עדיין: יש להוסיף DASHBOARD_USER ו-DASHBOARD_PASSWORD ב-Secrets של Streamlit Cloud")
+        return False
+
+    _, mid, _ = st.columns([1, 2, 1])
+    with mid:
+        st.markdown('<div class="section-title" style="font-size:14px">🔒 כניסה לדשבורד</div>', unsafe_allow_html=True)
+        with st.form("login_form"):
+            username = st.text_input("שם משתמש")
+            password = st.text_input("סיסמה", type="password")
+            submitted = st.form_submit_button("כניסה", use_container_width=True)
+        if submitted:
+            if hmac.compare_digest(username, valid_user) and hmac.compare_digest(password, valid_pass):
+                st.session_state["authenticated"] = True
+                st.rerun()
+            else:
+                st.error("שם משתמש או סיסמה שגויים")
+    return False
+
+if not check_login():
+    st.stop()
+
 st.markdown(f'<p style="color:#00aa00;text-align:right">עדכון אחרון: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>', unsafe_allow_html=True)
 st.divider()
 
@@ -278,6 +315,9 @@ with st.expander("⚙️ הגדרות", expanded=False):
         st.write("")
         st.write("")
         if st.button("🔄 רענן", use_container_width=True):
+            st.rerun()
+        if st.button("🔒 התנתק", use_container_width=True):
+            st.session_state["authenticated"] = False
             st.rerun()
 
 st.markdown('<div class="section-title">מחירים עכשוויים</div>', unsafe_allow_html=True)
