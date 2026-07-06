@@ -877,6 +877,118 @@ def get_upcoming_events(tickers, days=21):
     events.sort(key=lambda x: x["date"])
     return events
 
+# ---------- גילוי מניות: סריקת שוק + באזז ----------
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def scan_market_insider_buys(days=1, min_value_k=200, max_rows=100):
+    """סורק את כל השוק לרכישות אנשי פנים (מקור: OpenInsider)"""
+    try:
+        from io import StringIO
+        url = (
+            "http://openinsider.com/screener?s=&o=&pl=&ph=&ll=&lh="
+            f"&fd={days}&fdr=&td=0&tdr=&fdlyl=&fdlyh=&daysago=&xp=1&xs=0"
+            f"&vl={min_value_k}&vh=&ocl=&och=&sic1=-1&sicl=100&sich=9999"
+            "&grp=0&nfl=&nfh=&nil=&nih=&nol=&noh=&v2l=&v2h=&oc2l=&oc2h="
+            f"&sortcol=0&cnt={max_rows}&page=1"
+        )
+        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+        if r.status_code != 200:
+            return []
+        tables = pd.read_html(StringIO(r.text))
+        df = None
+        for tbl in tables:
+            cols = [str(c) for c in tbl.columns]
+            if any("Ticker" in c for c in cols):
+                df = tbl
+                break
+        if df is None:
+            return []
+
+        def find_col(df, name):
+            for c in df.columns:
+                if name.lower() in str(c).lower():
+                    return c
+            return None
+
+        c_tick = find_col(df, "Ticker")
+        c_comp = find_col(df, "Company")
+        c_name = find_col(df, "Insider")
+        c_title = find_col(df, "Title")
+        c_date = find_col(df, "Filing")
+        c_val = find_col(df, "Value")
+        out = []
+        for _, row in df.iterrows():
+            try:
+                ticker = str(row[c_tick]).strip().upper()
+                if not ticker or ticker == "NAN" or len(ticker) > 5:
+                    continue
+                val = float(str(row[c_val]).replace("$", "").replace(",", "").replace("+", "").strip())
+                out.append({
+                    "ticker": ticker,
+                    "company": str(row[c_comp]).strip() if c_comp else "",
+                    "insider": str(row[c_name]).strip() if c_name else "",
+                    "title": str(row[c_title]).strip() if c_title else "",
+                    "date": str(row[c_date]).strip()[:10] if c_date else "",
+                    "value": val,
+                })
+            except Exception:
+                continue
+        return out
+    except Exception:
+        return []
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_reddit_buzz():
+    """מדד אזכורים ברדיט לכל השוק (מקור: ApeWisdom)"""
+    try:
+        r = requests.get("https://apewisdom.io/api/v1.0/filter/all-stocks/page/1",
+                         headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+        buzz = {}
+        for item in r.json().get("results", []):
+            t = str(item.get("ticker", "")).upper()
+            if t:
+                buzz[t] = {"rank": int(item.get("rank", 999)),
+                           "mentions": int(item.get("mentions", 0) or 0)}
+        return buzz
+    except Exception:
+        return {}
+
+def pick_daily_discovery(buys, buzz, exclude):
+    """הבחירה היומית: רכישת אנשי הפנים הבולטת של היום + בונוס באזז"""
+    candidates = [dict(b) for b in buys if b["ticker"] not in exclude]
+    if not candidates:
+        return None
+    for c in candidates:
+        bz = buzz.get(c["ticker"])
+        c["buzz_rank"] = bz["rank"] if bz else None
+        c["buzz_mentions"] = bz["mentions"] if bz else 0
+        bonus = 1.5 if bz and bz["rank"] <= 30 else 1.2 if bz and bz["rank"] <= 100 else 1.0
+        c["score"] = c["value"] * bonus
+    return max(candidates, key=lambda x: x["score"])
+
+def pick_monthly_discovery(buys30, buzz, exclude):
+    """הבחירה החודשית: המניה עם הכי הרבה רכישות אנשי פנים ב-30 יום"""
+    counts, values, latest = {}, {}, {}
+    for b in buys30:
+        t = b["ticker"]
+        if t in exclude:
+            continue
+        counts[t] = counts.get(t, 0) + 1
+        values[t] = values.get(t, 0) + b["value"]
+        latest[t] = b
+    if not counts:
+        return None
+    winner = max(counts, key=lambda t: (counts[t], values[t]))
+    bz = buzz.get(winner)
+    return {
+        "ticker": winner,
+        "company": latest[winner]["company"],
+        "count": counts[winner],
+        "total_value": values[winner],
+        "buzz_rank": bz["rank"] if bz else None,
+        "buzz_mentions": bz["mentions"] if bz else 0,
+    }
+
 # ---------- סיכום: ניתוח Claude (עם גיבוי לוגי) ----------
 # Claude מקבל את כל האיתותים שנאספו ומחזיר המלצה לכל מניה.
 # התוצאה נשמרת במטמון לשעה כדי לחסוך בעלויות API.
@@ -1258,3 +1370,82 @@ for s in portfolio_summary:
         <div style="color:#008800; font-size:12px">{s["reasons"]}{extra}</div>
     </div>
     ''', unsafe_allow_html=True)
+
+# ---------- 7. גילוי מניות — מחוץ לתיק ----------
+
+st.divider()
+st.markdown('<div class="section-title">🔍 גילוי מניות — המלצות מחוץ לתיק</div>', unsafe_allow_html=True)
+st.markdown('''
+<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+סריקה של כל השוק: איפה אנשי פנים קונים בכסף שלהם, משוקלל עם באזז ברדיט. מניות שכבר בתיק שלך מסוננות החוצה.
+מקורות: OpenInsider + ApeWisdom · לא ייעוץ פיננסי.
+</div>
+''', unsafe_allow_html=True)
+
+with st.spinner("סורק את השוק..."):
+    buzz_data = get_reddit_buzz()
+    exclude_set = {s.upper() for s in selected_stocks}
+    daily_buys = scan_market_insider_buys(days=1)
+    daily_label = "היום"
+    if not daily_buys:
+        daily_buys = scan_market_insider_buys(days=3)
+        daily_label = "3 הימים האחרונים"
+    monthly_buys = scan_market_insider_buys(days=30, min_value_k=100, max_rows=500)
+    daily_pick = pick_daily_discovery(daily_buys, buzz_data, exclude_set)
+    monthly_pick = pick_monthly_discovery(monthly_buys, buzz_data, exclude_set)
+
+col_d, col_m = st.columns(2, gap="medium")
+
+with col_d:
+    st.markdown(f'<div class="section-title">☀️ המלצת {daily_label}</div>', unsafe_allow_html=True)
+    if daily_pick:
+        t = daily_pick["ticker"]
+        p, c = get_stock_info(t)
+        price_str = f"${p} ({'▲' if (c or 0) >= 0 else '▼'} {c}%)" if p else ""
+        val = daily_pick["value"]
+        val_str = f"${val/1e6:.1f}M" if val >= 1e6 else f"${val/1e3:.0f}K"
+        buzz_str = (f'🔥 מקום {daily_pick["buzz_rank"]} בבאזז רדיט ({daily_pick["buzz_mentions"]} אזכורים)'
+                    if daily_pick["buzz_rank"] else "ללא באזז חריג ברדיט")
+        st.markdown(f'''
+        <div class="metric-card" style="margin-bottom:10px">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                <span style="font-size:22px; color:#00ff41; font-family:monospace">{t}</span>
+                <span class="badge-buy">קניית פנים {val_str}</span>
+            </div>
+            <div style="color:#00aa00; font-size:12px; margin-bottom:4px">🏢 {daily_pick["company"]} {price_str}</div>
+            <div style="color:#00cc33; font-size:12px; margin-bottom:4px">👤 {daily_pick["insider"]} — {daily_pick["title"]}</div>
+            <div style="color:#008800; font-size:12px">{buzz_str}</div>
+        </div>
+        ''', unsafe_allow_html=True)
+        with st.spinner("Claude בודק..."):
+            take = cached_claude_analysis(t)
+        st.markdown(f'<div class="analysis-card" style="font-size:12px">{take}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="news-item">⚪ לא נמצאו רכישות אנשי פנים בולטות (או שהמקור אינו זמין כרגע)</div>', unsafe_allow_html=True)
+
+with col_m:
+    st.markdown('<div class="section-title">📆 המלצת החודש</div>', unsafe_allow_html=True)
+    if monthly_pick:
+        t = monthly_pick["ticker"]
+        p, c = get_stock_info(t)
+        price_str = f"${p} ({'▲' if (c or 0) >= 0 else '▼'} {c}%)" if p else ""
+        tv = monthly_pick["total_value"]
+        tv_str = f"${tv/1e6:.1f}M" if tv >= 1e6 else f"${tv/1e3:.0f}K"
+        buzz_str = (f'🔥 מקום {monthly_pick["buzz_rank"]} בבאזז רדיט ({monthly_pick["buzz_mentions"]} אזכורים)'
+                    if monthly_pick["buzz_rank"] else "ללא באזז חריג ברדיט")
+        st.markdown(f'''
+        <div class="metric-card" style="margin-bottom:10px">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                <span style="font-size:22px; color:#00ff41; font-family:monospace">{t}</span>
+                <span class="badge-buy">{monthly_pick["count"]} רכישות פנים בחודש</span>
+            </div>
+            <div style="color:#00aa00; font-size:12px; margin-bottom:4px">🏢 {monthly_pick["company"]} {price_str}</div>
+            <div style="color:#00cc33; font-size:12px; margin-bottom:4px">💰 סה"כ נרכש: {tv_str}</div>
+            <div style="color:#008800; font-size:12px">{buzz_str}</div>
+        </div>
+        ''', unsafe_allow_html=True)
+        with st.spinner("Claude בודק..."):
+            take_m = cached_claude_analysis(t)
+        st.markdown(f'<div class="analysis-card" style="font-size:12px">{take_m}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="news-item">⚪ לא נמצאו נתונים חודשיים (או שהמקור אינו זמין כרגע)</div>', unsafe_allow_html=True)
