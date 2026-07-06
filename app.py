@@ -1390,6 +1390,10 @@ with st.spinner("סורק את השוק..."):
     if not daily_buys:
         daily_buys = scan_market_insider_buys(days=3)
         daily_label = "3 הימים האחרונים"
+    if not daily_buys:
+        # סופי שבוע ארוכים וחגים — מתרחבים לשבוע
+        daily_buys = scan_market_insider_buys(days=7)
+        daily_label = "השבוע האחרון"
     monthly_buys = scan_market_insider_buys(days=30, min_value_k=100, max_rows=500)
     daily_pick = pick_daily_discovery(daily_buys, buzz_data, exclude_set)
     monthly_pick = pick_monthly_discovery(monthly_buys, buzz_data, exclude_set)
