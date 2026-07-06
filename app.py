@@ -119,6 +119,29 @@ h1, h2, h3 {
     font-family: 'Share Tech Mono', monospace;
 }
 
+.stTabs [data-baseweb="tab-list"] {
+    gap: 6px;
+    direction: rtl;
+    border-bottom: 1px solid rgba(0,255,65,0.25);
+}
+
+.stTabs [data-baseweb="tab"] {
+    color: #00aa00;
+    font-family: 'Share Tech Mono', monospace;
+    background: rgba(0,15,0,0.6);
+    border: 1px solid rgba(0,255,65,0.25);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 6px 16px;
+}
+
+.stTabs [aria-selected="true"] {
+    color: #00ff41 !important;
+    border-color: rgba(0,255,65,0.7);
+    text-shadow: 0 0 6px rgba(0,255,65,0.6);
+    background: rgba(0,25,0,0.9);
+}
+
 [data-testid="stSidebar"] {
     background-color: rgba(0, 10, 0, 0.95) !important;
     border-left: 1px solid rgba(0,255,65,0.2);
@@ -320,137 +343,146 @@ with st.expander("⚙️ הגדרות", expanded=False):
             st.session_state["authenticated"] = False
             st.rerun()
 
-st.markdown('<div class="section-title">מחירים עכשוויים</div>', unsafe_allow_html=True)
-n = len(selected_stocks)
-cols_per_row = 2 if n > 4 else n
-rows = [selected_stocks[i:i+cols_per_row] for i in range(0, n, cols_per_row)]
-for row_stocks in rows:
-    cols = st.columns(len(row_stocks), gap="small")
-    for i, stock in enumerate(row_stocks):
+tab_prices, tab_analysis, tab_signals, tab_news = st.tabs(
+    ["📊 מחירים", "🤖 ניתוח Claude", "🛰️ איתותים והמלצות", "📰 חדשות"]
+)
+
+with tab_prices:
+    st.markdown('<div class="section-title">מחירים עכשוויים</div>', unsafe_allow_html=True)
+    n = len(selected_stocks)
+    cols_per_row = 2 if n > 4 else n
+    rows = [selected_stocks[i:i+cols_per_row] for i in range(0, n, cols_per_row)]
+    for row_stocks in rows:
+        cols = st.columns(len(row_stocks), gap="small")
+        for i, stock in enumerate(row_stocks):
+            price, change = get_stock_info(stock)
+            if price:
+                delta_class = "metric-up" if change >= 0 else "metric-dn"
+                arrow = "▲" if change >= 0 else "▼"
+                cols[i].markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">{stock}</div>
+                    <div class="metric-value">${price}</div>
+                    <div class="{delta_class}">{arrow} {change}%</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    st.divider()
+
+with tab_analysis:
+    st.markdown(f'<div class="section-title">ניתוח Claude — {selected_stock}</div>', unsafe_allow_html=True)
+    with st.spinner("Claude מנתח..."):
+        price, change = get_stock_info(selected_stock)
+        news = get_yahoo_news(selected_stock)
+        finnhub_news = get_finnhub_news(selected_stock)
+        news = news + finnhub_news
+        reddit_posts = get_reddit_posts(selected_stock)
+        analysis = cached_claude_analysis(selected_stock, full_context=True)
+
+    rec = extract_recommendation(analysis)
+    badge_class = "badge-buy" if rec == "קנה" else "badge-sell" if rec == "מכור" else "badge-hold"
+    st.markdown(f'<span class="{badge_class}">{rec}</span>', unsafe_allow_html=True)
+    st.markdown(f'<div class="analysis-card">{analysis}</div>', unsafe_allow_html=True)
+
+    score = extract_score(analysis)
+    if score >= alert_threshold:
+        st.success(f"🔔 ציון גבוה ({score}/10) — שולח התראה במייל!")
+        sent = send_alert_email(selected_stock, analysis, price, change)
+        if sent:
+            st.success("✅ מייל נשלח בהצלחה!")
+    st.divider()
+
+    st.markdown('<div class="section-title">המלצות לכל המניות</div>', unsafe_allow_html=True)
+    rec_cols = st.columns(len(selected_stocks))
+    for i, stock in enumerate(selected_stocks):
         price, change = get_stock_info(stock)
         if price:
-            delta_class = "metric-up" if change >= 0 else "metric-dn"
+            analysis_tmp = cached_claude_analysis(stock)
+            rec_tmp = extract_recommendation(analysis_tmp)
+            score_tmp = extract_score(analysis_tmp)
+            badge = "badge-buy" if rec_tmp == "קנה" else "badge-sell" if rec_tmp == "מכור" else "badge-hold"
             arrow = "▲" if change >= 0 else "▼"
-            cols[i].markdown(f"""
+            delta_class = "metric-up" if change >= 0 else "metric-dn"
+            rec_cols[i].markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">{stock}</div>
                 <div class="metric-value">${price}</div>
                 <div class="{delta_class}">{arrow} {change}%</div>
+                <div style="margin-top:8px">
+                    <div class="strack-wrap" style="height:3px;background:rgba(0,200,0,0.15);border-radius:2px;margin-bottom:6px">
+                        <div style="width:{score_tmp*10}%;height:100%;background:{'#4ade80' if score_tmp>=7 else '#fb923c' if score_tmp>=5 else '#f87171'};border-radius:2px"></div>
+                    </div>
+                    <span class="{badge}">{rec_tmp}</span>
+                    <span style="font-size:11px;color:#00aa00;margin-right:6px">{score_tmp}/10</span>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
-st.divider()
+    st.divider()
 
-st.markdown(f'<div class="section-title">ניתוח Claude — {selected_stock}</div>', unsafe_allow_html=True)
-with st.spinner("Claude מנתח..."):
-    price, change = get_stock_info(selected_stock)
-    news = get_yahoo_news(selected_stock)
-    finnhub_news = get_finnhub_news(selected_stock)
-    news = news + finnhub_news
-    reddit_posts = get_reddit_posts(selected_stock)
-    analysis = cached_claude_analysis(selected_stock, full_context=True)
+with tab_prices:
+    st.markdown(f'<div class="section-title">גרף שנה אחרונה — {selected_stock}</div>', unsafe_allow_html=True)
 
-rec = extract_recommendation(analysis)
-badge_class = "badge-buy" if rec == "קנה" else "badge-sell" if rec == "מכור" else "badge-hold"
-st.markdown(f'<span class="{badge_class}">{rec}</span>', unsafe_allow_html=True)
-st.markdown(f'<div class="analysis-card">{analysis}</div>', unsafe_allow_html=True)
+    try:
+        import plotly.graph_objects as go
+        hist = yf.Ticker(selected_stock).history(period="1y")
+        if not hist.empty:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=hist.index,
+                y=hist['Close'],
+                mode='lines',
+                line=dict(color='#00ff41', width=1.5),
+                fill='tozeroy',
+                fillcolor='rgba(0,255,65,0.05)',
+                name=selected_stock
+            ))
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,15,0,0.85)',
+                font=dict(color='#00aa00', family='monospace'),
+                margin=dict(l=40, r=20, t=20, b=40),
+                height=300,
+                xaxis=dict(
+                    gridcolor='rgba(0,255,65,0.1)',
+                    showgrid=True,
+                    color='#00aa00'
+                ),
+                yaxis=dict(
+                    gridcolor='rgba(0,255,65,0.1)',
+                    showgrid=True,
+                    color='#00aa00'
+                ),
+                showlegend=False
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("לא נמצאו נתונים היסטוריים")
+    except Exception as e:
+        st.warning(f"שגיאה בטעינת גרף: {e}")
 
-score = extract_score(analysis)
-if score >= alert_threshold:
-    st.success(f"🔔 ציון גבוה ({score}/10) — שולח התראה במייל!")
-    sent = send_alert_email(selected_stock, analysis, price, change)
-    if sent:
-        st.success("✅ מייל נשלח בהצלחה!")
-st.divider()
+    st.divider()
 
-st.markdown('<div class="section-title">המלצות לכל המניות</div>', unsafe_allow_html=True)
-rec_cols = st.columns(len(selected_stocks))
-for i, stock in enumerate(selected_stocks):
-    price, change = get_stock_info(stock)
-    if price:
-        analysis_tmp = cached_claude_analysis(stock)
-        rec_tmp = extract_recommendation(analysis_tmp)
-        score_tmp = extract_score(analysis_tmp)
-        badge = "badge-buy" if rec_tmp == "קנה" else "badge-sell" if rec_tmp == "מכור" else "badge-hold"
-        arrow = "▲" if change >= 0 else "▼"
-        delta_class = "metric-up" if change >= 0 else "metric-dn"
-        rec_cols[i].markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">{stock}</div>
-            <div class="metric-value">${price}</div>
-            <div class="{delta_class}">{arrow} {change}%</div>
-            <div style="margin-top:8px">
-                <div class="strack-wrap" style="height:3px;background:rgba(0,200,0,0.15);border-radius:2px;margin-bottom:6px">
-                    <div style="width:{score_tmp*10}%;height:100%;background:{'#4ade80' if score_tmp>=7 else '#fb923c' if score_tmp>=5 else '#f87171'};border-radius:2px"></div>
-                </div>
-                <span class="{badge}">{rec_tmp}</span>
-                <span style="font-size:11px;color:#00aa00;margin-right:6px">{score_tmp}/10</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-st.divider()
-
-st.markdown(f'<div class="section-title">גרף שנה אחרונה — {selected_stock}</div>', unsafe_allow_html=True)
-
-try:
-    import plotly.graph_objects as go
-    hist = yf.Ticker(selected_stock).history(period="1y")
-    if not hist.empty:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=hist.index,
-            y=hist['Close'],
-            mode='lines',
-            line=dict(color='#00ff41', width=1.5),
-            fill='tozeroy',
-            fillcolor='rgba(0,255,65,0.05)',
-            name=selected_stock
-        ))
-        fig.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,15,0,0.85)',
-            font=dict(color='#00aa00', family='monospace'),
-            margin=dict(l=40, r=20, t=20, b=40),
-            height=300,
-            xaxis=dict(
-                gridcolor='rgba(0,255,65,0.1)',
-                showgrid=True,
-                color='#00aa00'
-            ),
-            yaxis=dict(
-                gridcolor='rgba(0,255,65,0.1)',
-                showgrid=True,
-                color='#00aa00'
-            ),
-            showlegend=False
-        )
-        st.plotly_chart(fig, use_container_width=True)
+with tab_news:
+    st.markdown('<div class="section-title">חדשות אחרונות</div>', unsafe_allow_html=True)
+    if news:
+        for item in news:
+            st.markdown(f'<div class="news-item">📌 {item["כותרת"]} — <span style="color:#006600">{item["מקור"]}</span></div>', unsafe_allow_html=True)
     else:
-        st.warning("לא נמצאו נתונים היסטוריים")
-except Exception as e:
-    st.warning(f"שגיאה בטעינת גרף: {e}")
+        st.warning("לא נמצאו חדשות")
 
-st.divider()
+    st.divider()
 
-st.markdown('<div class="section-title">חדשות אחרונות</div>', unsafe_allow_html=True)
-if news:
-    for item in news:
-        st.markdown(f'<div class="news-item">📌 {item["כותרת"]} — <span style="color:#006600">{item["מקור"]}</span></div>', unsafe_allow_html=True)
-else:
-    st.warning("לא נמצאו חדשות")
-
-st.divider()
-
-st.markdown(f'<div class="section-title">פוסטים מ-Reddit — {selected_stock}</div>', unsafe_allow_html=True)
-if reddit_posts:
-    for post in reddit_posts:
-        with st.expander(post["כותרת"]):
-            col1, col2 = st.columns(2)
-            col1.metric("ציונים", post["ציונים"])
-            col2.metric("תגובות", post["תגובות"])
-else:
-    st.warning("לא נמצאו פוסטים מ-Reddit")
+with tab_news:
+    st.markdown(f'<div class="section-title">פוסטים מ-Reddit — {selected_stock}</div>', unsafe_allow_html=True)
+    if reddit_posts:
+        for post in reddit_posts:
+            with st.expander(post["כותרת"]):
+                col1, col2 = st.columns(2)
+                col1.metric("ציונים", post["ציונים"])
+                col2.metric("תגובות", post["תגובות"])
+    else:
+        st.warning("לא נמצאו פוסטים מ-Reddit")
 
 
 # ============================================================
@@ -1143,313 +1175,314 @@ def build_summary(tickers, insider, congress, filings_8k, volume, events):
     summary.sort(key=lambda x: (-abs(x["score"]), -x["n_signals"]))
     return summary
 
-# ---------- איסוף הנתונים ----------
+with tab_signals:
+    # ---------- איסוף הנתונים ----------
 
-st.divider()
-st.markdown('<h3 style="text-align:right">🛰️ מרכז האיתותים</h3>', unsafe_allow_html=True)
+    st.divider()
+    st.markdown('<h3 style="text-align:right">🛰️ מרכז האיתותים</h3>', unsafe_allow_html=True)
 
-with st.spinner("אוסף איתותים מ-SEC, Finnhub ומקורות נוספים..."):
-    fg_score, fg_source = get_fear_greed()
-    insider_trades = get_insider_trades(selected_stocks)
-    filings_8k = get_8k_filings(selected_stocks)
-    congress_trades, congress_source = get_congress_trades(selected_stocks)
-    volume_alerts = get_volume_anomalies(selected_stocks)
-    upcoming_events = get_upcoming_events(selected_stocks)
-    signals_json = build_signals_json(
-        selected_stocks, insider_trades, congress_trades,
-        filings_8k, volume_alerts, upcoming_events, fg_score,
-    )
-    portfolio_summary = claude_portfolio_summary(signals_json)
-    summary_source = "Claude"
-    if not portfolio_summary:
-        portfolio_summary = build_summary(
+    with st.spinner("אוסף איתותים מ-SEC, Finnhub ומקורות נוספים..."):
+        fg_score, fg_source = get_fear_greed()
+        insider_trades = get_insider_trades(selected_stocks)
+        filings_8k = get_8k_filings(selected_stocks)
+        congress_trades, congress_source = get_congress_trades(selected_stocks)
+        volume_alerts = get_volume_anomalies(selected_stocks)
+        upcoming_events = get_upcoming_events(selected_stocks)
+        signals_json = build_signals_json(
             selected_stocks, insider_trades, congress_trades,
-            filings_8k, volume_alerts, upcoming_events,
+            filings_8k, volume_alerts, upcoming_events, fg_score,
         )
-        summary_source = "לוגיקה מקומית (Claude לא זמין כרגע)"
+        portfolio_summary = claude_portfolio_summary(signals_json)
+        summary_source = "Claude"
+        if not portfolio_summary:
+            portfolio_summary = build_summary(
+                selected_stocks, insider_trades, congress_trades,
+                filings_8k, volume_alerts, upcoming_events,
+            )
+            summary_source = "לוגיקה מקומית (Claude לא זמין כרגע)"
 
-week_ago_str = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-new_signals = (
-    len([x for x in insider_trades if x["date"] >= week_ago_str])
-    + len([x for x in filings_8k if x["date"] >= week_ago_str])
-    + len([x for x in congress_trades if x["date"] >= week_ago_str])
-    + len(volume_alerts)
-)
-earnings_this_week = len([
-    x for x in upcoming_events
-    if x["date"] and datetime.strptime(x["date"], "%Y-%m-%d").date()
-    <= (datetime.now() + timedelta(days=7)).date()
-])
+    week_ago_str = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    new_signals = (
+        len([x for x in insider_trades if x["date"] >= week_ago_str])
+        + len([x for x in filings_8k if x["date"] >= week_ago_str])
+        + len([x for x in congress_trades if x["date"] >= week_ago_str])
+        + len(volume_alerts)
+    )
+    earnings_this_week = len([
+        x for x in upcoming_events
+        if x["date"] and datetime.strptime(x["date"], "%Y-%m-%d").date()
+        <= (datetime.now() + timedelta(days=7)).date()
+    ])
 
-# ---------- שורת מדדים עליונה ----------
+    # ---------- שורת מדדים עליונה ----------
 
-hdr = st.columns(4, gap="small")
-hdr_items = [
-    ("אירועים השבוע", f"{earnings_this_week}", "דוחות והחלטות"),
-    ("מצב שוק כללי", f"{fg_score if fg_score is not None else '—'}", fear_greed_label(fg_score)),
-    ("איתותים חדשים", f"{new_signals}", "7 ימים אחרונים"),
-    ("עדכון אחרון", datetime.now().strftime("%H:%M"), "רענון כל שעה"),
-]
-for col, (label, value, sub) in zip(hdr, hdr_items):
-    col.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">{label}</div>
-        <div class="metric-value">{value}</div>
-        <div style="font-size:11px;color:#00aa00">{sub}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ---------- 1. פעולות חברי קונגרס ----------
-
-st.divider()
-st.markdown('<div class="section-title">🏛️ פעולות חברי קונגרס — מקור לא רשמי</div>', unsafe_allow_html=True)
-st.markdown('''
-<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
-מדוע זה רלוונטי: חברי קונגרס מחויבים לדווח על עסקאות תוך 45 יום. היסטורית הם קונים לפני חוזים ממשלתיים ורגולציה חיובית.
-שים לב: המקור אינו רשמי ועלול להתעדכן באיחור.
-</div>
-''', unsafe_allow_html=True)
-
-if congress_trades:
-    for tr in congress_trades[:6]:
-        badge = "badge-buy" if tr["is_buy"] else "badge-sell" if tr.get("is_sell") else "badge-hold"
-        label = "קנה" if tr["is_buy"] else "מכר" if tr.get("is_sell") else "עסקה"
-        amount = f' | 💰 {tr["amount"]}' if tr.get("amount") else ""
-        role = f' ({tr["role"]})' if tr.get("role") else ""
-        st.markdown(f'''
-        <div class="metric-card" style="margin-bottom:10px">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                <span style="font-size:18px; color:#00ff41; font-family:monospace">{tr["ticker"]}</span>
-                <span class="{badge}">{label}</span>
-            </div>
-            <div style="color:#00aa00; font-size:12px">👤 {tr["name"]}{role}{amount}</div>
-            <div style="color:#008800; font-size:11px; margin-top:4px">דווח: {tr["date"]} · מקור: {congress_source}</div>
+    hdr = st.columns(4, gap="small")
+    hdr_items = [
+        ("אירועים השבוע", f"{earnings_this_week}", "דוחות והחלטות"),
+        ("מצב שוק כללי", f"{fg_score if fg_score is not None else '—'}", fear_greed_label(fg_score)),
+        ("איתותים חדשים", f"{new_signals}", "7 ימים אחרונים"),
+        ("עדכון אחרון", datetime.now().strftime("%H:%M"), "רענון כל שעה"),
+    ]
+    for col, (label, value, sub) in zip(hdr, hdr_items):
+        col.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">{label}</div>
+            <div class="metric-value">{value}</div>
+            <div style="font-size:11px;color:#00aa00">{sub}</div>
         </div>
-        ''', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="news-item">⚪ לא נמצאו עסקאות קונגרס עדכניות למניות שלך (או שהמקור החינמי אינו זמין כרגע)</div>', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-# ---------- 2. רכישות אנשי פנים (Form 4) ----------
+    # ---------- 1. פעולות חברי קונגרס ----------
 
-st.divider()
-st.markdown('<div class="section-title">👤 רכישות אנשי פנים — SEC Form 4</div>', unsafe_allow_html=True)
-st.markdown('''
-<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
-מדוע זה רלוונטי: כשמנכ"ל קונה במניות החברה שלו בכסף שלו — זה הסיגנל החזק ביותר שיש. הוא יודע יותר מכולם.
-מוצגות רק עסקאות אמיתיות בשוק הפתוח (לא הענקות אופציות).
-</div>
-''', unsafe_allow_html=True)
-
-if insider_trades:
-    for tr in insider_trades[:8]:
-        badge = "badge-buy" if tr["is_buy"] else "badge-sell"
-        label = "קנה" if tr["is_buy"] else "מכר"
-        val = tr["value"]
-        val_str = f"${val/1e6:.1f}M" if val >= 1e6 else f"${val:,.0f}"
-        st.markdown(f'''
-        <div class="metric-card" style="margin-bottom:10px">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                <span style="font-size:18px; color:#00ff41; font-family:monospace">{tr["ticker"]}</span>
-                <span class="{badge}">{label} {val_str}</span>
-            </div>
-            <div style="color:#00aa00; font-size:12px">👤 {tr["owner"]} — {tr["title"]}</div>
-            <div style="color:#008800; font-size:11px; margin-top:4px">
-                דווח: {tr["date"]} · <a href="{tr["url"]}" target="_blank" style="color:#00cc33">לדיווח המלא ב-SEC</a>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="news-item">⚪ אין עסקאות אנשי פנים ב-30 הימים האחרונים במניות שלך (הערה: חברות זרות כמו TSM ו-ESLT פטורות מדיווח Form 4)</div>', unsafe_allow_html=True)
-
-# ---------- 3. הודעות 8-K ----------
-
-st.divider()
-st.markdown('<div class="section-title">📄 הודעות רשמיות לרשות ניירות ערך (8-K) — SEC EDGAR</div>', unsafe_allow_html=True)
-st.markdown('''
-<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
-מדוע זה רלוונטי: חברות חייבות לדווח על עסקאות גדולות, שינויי הנהלה וחוזים משמעותיים — לרוב לפני שהתקשורת מגיעה.
-</div>
-''', unsafe_allow_html=True)
-
-if filings_8k:
-    for f in filings_8k[:8]:
-        st.markdown(f'''
-        <div class="metric-card" style="margin-bottom:10px">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                <span style="font-size:18px; color:#00ff41; font-family:monospace">{f["ticker"]}</span>
-                <span style="font-size:11px; color:#00aa00">{f["date"]}</span>
-            </div>
-            <div style="color:#00cc33; font-size:13px">{f["items"]}</div>
-            <div style="color:#008800; font-size:11px; margin-top:4px">
-                <a href="{f["url"]}" target="_blank" style="color:#00cc33">לדיווח המלא ב-SEC</a>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="news-item">⚪ אין הודעות 8-K ב-14 הימים האחרונים במניות שלך</div>', unsafe_allow_html=True)
-
-# ---------- 4. נפח מסחר חריג ----------
-
-st.divider()
-st.markdown('<div class="section-title">📊 נפח מסחר חריג — חריגה מהממוצע של 30 יום</div>', unsafe_allow_html=True)
-st.markdown('''
-<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
-מדוע זה רלוונטי: כשפתאום סוחרים הרבה יותר ממה שרגיל — מישהו גדול נכנס. לרוב זה קורה לפני חדשות.
-</div>
-''', unsafe_allow_html=True)
-
-if volume_alerts:
-    for v in volume_alerts:
-        chg = v["change"]
-        chg_str = f'{"▲" if chg >= 0 else "▼"} {abs(chg)}% היום'
-        chg_class = "metric-up" if chg >= 0 else "metric-dn"
-        st.markdown(f'''
-        <div class="metric-card" style="margin-bottom:10px">
-            <div style="display:flex; justify-content:space-between; align-items:center">
-                <span style="font-size:18px; color:#00ff41; font-family:monospace">{v["ticker"]}</span>
-                <span class="badge-hold">נפח פי {v["ratio"]} מהממוצע</span>
-            </div>
-            <div class="{chg_class}" style="margin-top:6px">{chg_str}</div>
-        </div>
-        ''', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="news-item">⚪ אין חריגות נפח כרגע — כל המניות נסחרות בנפח רגיל</div>', unsafe_allow_html=True)
-
-# ---------- 5. אירועים קרובים ----------
-
-st.divider()
-st.markdown('<div class="section-title">📅 אירועים קרובים שכדאי לדעת עליהם — Finnhub</div>', unsafe_allow_html=True)
-st.markdown('''
-<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
-מדוע זה רלוונטי: לפני דוחות רבעוניים ואירועי מאקרו — שווה לבדוק את כל האיתותים האחרים על אותה מניה.
-</div>
-''', unsafe_allow_html=True)
-
-if upcoming_events:
-    today_d = datetime.now().date()
-    for e in upcoming_events[:10]:
-        try:
-            ed = datetime.strptime(e["date"], "%Y-%m-%d").date()
-            days_left = (ed - today_d).days
-            when = "היום" if days_left == 0 else "מחר" if days_left == 1 else ed.strftime("%d/%m")
-            urgency = "קריטי" if days_left <= 2 else "חשוב" if days_left <= 7 else "שים לב"
-            badge = "badge-sell" if days_left <= 2 else "badge-hold" if days_left <= 7 else "badge-buy"
-        except (ValueError, TypeError):
-            when, urgency, badge = e["date"], "שים לב", "badge-buy"
-        eps = f' | תחזית EPS: {e["eps_est"]}' if e.get("eps_est") else ""
-        st.markdown(f'''
-        <div class="news-item">
-            📌 <span style="color:#00ff41; font-family:monospace">{e["ticker"]}</span> — {e["type"]}{eps}
-            <span style="color:#00aa00; font-size:11px"> | {when}</span>
-            <span class="{badge}" style="margin-right:8px; font-size:11px">{urgency}</span>
-        </div>
-        ''', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="news-item">⚪ אין אירועים ב-21 הימים הקרובים</div>', unsafe_allow_html=True)
-
-# ---------- 6. סיכום — מה לעשות עם התיק ----------
-
-st.divider()
-st.markdown('<div class="section-title">💼 סיכום Claude — מה לעשות עם התיק שלי</div>', unsafe_allow_html=True)
-st.markdown(f'''
-<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
-ניתוח המשלב את כל האיתותים שנאספו — לא ייעוץ פיננסי. ההחלטה הסופית תמיד שלך.
-מקור הניתוח: {summary_source} · מתעדכן אחת לשעה
-</div>
-''', unsafe_allow_html=True)
-
-for s in portfolio_summary:
-    extra = f' — {s["n_signals"]} איתותים' if s.get("n_signals") is not None else ""
-    st.markdown(f'''
-    <div class="metric-card" style="margin-bottom:10px">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-            <span style="font-size:18px; color:#00ff41; font-family:monospace">{s["ticker"]}</span>
-            <span class="{s["badge"]}">{s["label"]}</span>
-        </div>
-        <div style="color:#00cc33; font-size:14px; margin-bottom:4px">{s["rec"]}</div>
-        <div style="color:#008800; font-size:12px">{s["reasons"]}{extra}</div>
+    st.divider()
+    st.markdown('<div class="section-title">🏛️ פעולות חברי קונגרס — מקור לא רשמי</div>', unsafe_allow_html=True)
+    st.markdown('''
+    <div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+    מדוע זה רלוונטי: חברי קונגרס מחויבים לדווח על עסקאות תוך 45 יום. היסטורית הם קונים לפני חוזים ממשלתיים ורגולציה חיובית.
+    שים לב: המקור אינו רשמי ועלול להתעדכן באיחור.
     </div>
     ''', unsafe_allow_html=True)
 
-# ---------- 7. גילוי מניות — מחוץ לתיק ----------
+    if congress_trades:
+        for tr in congress_trades[:6]:
+            badge = "badge-buy" if tr["is_buy"] else "badge-sell" if tr.get("is_sell") else "badge-hold"
+            label = "קנה" if tr["is_buy"] else "מכר" if tr.get("is_sell") else "עסקה"
+            amount = f' | 💰 {tr["amount"]}' if tr.get("amount") else ""
+            role = f' ({tr["role"]})' if tr.get("role") else ""
+            st.markdown(f'''
+            <div class="metric-card" style="margin-bottom:10px">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                    <span style="font-size:18px; color:#00ff41; font-family:monospace">{tr["ticker"]}</span>
+                    <span class="{badge}">{label}</span>
+                </div>
+                <div style="color:#00aa00; font-size:12px">👤 {tr["name"]}{role}{amount}</div>
+                <div style="color:#008800; font-size:11px; margin-top:4px">דווח: {tr["date"]} · מקור: {congress_source}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="news-item">⚪ לא נמצאו עסקאות קונגרס עדכניות למניות שלך (או שהמקור החינמי אינו זמין כרגע)</div>', unsafe_allow_html=True)
 
-st.divider()
-st.markdown('<div class="section-title">🔍 גילוי מניות — המלצות מחוץ לתיק</div>', unsafe_allow_html=True)
-st.markdown('''
-<div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
-סריקה של כל השוק: איפה אנשי פנים קונים בכסף שלהם, משוקלל עם באזז ברדיט. מניות שכבר בתיק שלך מסוננות החוצה.
-מקורות: OpenInsider + ApeWisdom · לא ייעוץ פיננסי.
-</div>
-''', unsafe_allow_html=True)
+    # ---------- 2. רכישות אנשי פנים (Form 4) ----------
 
-with st.spinner("סורק את השוק..."):
-    buzz_data = get_reddit_buzz()
-    exclude_set = {s.upper() for s in selected_stocks}
-    daily_buys = scan_market_insider_buys(days=1)
-    daily_label = "היום"
-    if not daily_buys:
-        daily_buys = scan_market_insider_buys(days=3)
-        daily_label = "3 הימים האחרונים"
-    if not daily_buys:
-        # סופי שבוע ארוכים וחגים — מתרחבים לשבוע
-        daily_buys = scan_market_insider_buys(days=7)
-        daily_label = "השבוע האחרון"
-    monthly_buys = scan_market_insider_buys(days=30, min_value_k=100, max_rows=500)
-    daily_pick = pick_daily_discovery(daily_buys, buzz_data, exclude_set)
-    monthly_pick = pick_monthly_discovery(monthly_buys, buzz_data, exclude_set)
+    st.divider()
+    st.markdown('<div class="section-title">👤 רכישות אנשי פנים — SEC Form 4</div>', unsafe_allow_html=True)
+    st.markdown('''
+    <div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+    מדוע זה רלוונטי: כשמנכ"ל קונה במניות החברה שלו בכסף שלו — זה הסיגנל החזק ביותר שיש. הוא יודע יותר מכולם.
+    מוצגות רק עסקאות אמיתיות בשוק הפתוח (לא הענקות אופציות).
+    </div>
+    ''', unsafe_allow_html=True)
 
-col_d, col_m = st.columns(2, gap="medium")
+    if insider_trades:
+        for tr in insider_trades[:8]:
+            badge = "badge-buy" if tr["is_buy"] else "badge-sell"
+            label = "קנה" if tr["is_buy"] else "מכר"
+            val = tr["value"]
+            val_str = f"${val/1e6:.1f}M" if val >= 1e6 else f"${val:,.0f}"
+            st.markdown(f'''
+            <div class="metric-card" style="margin-bottom:10px">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                    <span style="font-size:18px; color:#00ff41; font-family:monospace">{tr["ticker"]}</span>
+                    <span class="{badge}">{label} {val_str}</span>
+                </div>
+                <div style="color:#00aa00; font-size:12px">👤 {tr["owner"]} — {tr["title"]}</div>
+                <div style="color:#008800; font-size:11px; margin-top:4px">
+                    דווח: {tr["date"]} · <a href="{tr["url"]}" target="_blank" style="color:#00cc33">לדיווח המלא ב-SEC</a>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="news-item">⚪ אין עסקאות אנשי פנים ב-30 הימים האחרונים במניות שלך (הערה: חברות זרות כמו TSM ו-ESLT פטורות מדיווח Form 4)</div>', unsafe_allow_html=True)
 
-with col_d:
-    st.markdown(f'<div class="section-title">☀️ המלצת {daily_label}</div>', unsafe_allow_html=True)
-    if daily_pick:
-        t = daily_pick["ticker"]
-        p, c = get_stock_info(t)
-        price_str = f"${p} ({'▲' if (c or 0) >= 0 else '▼'} {c}%)" if p else ""
-        val = daily_pick["value"]
-        val_str = f"${val/1e6:.1f}M" if val >= 1e6 else f"${val/1e3:.0f}K"
-        buzz_str = (f'🔥 מקום {daily_pick["buzz_rank"]} בבאזז רדיט ({daily_pick["buzz_mentions"]} אזכורים)'
-                    if daily_pick["buzz_rank"] else "ללא באזז חריג ברדיט")
+    # ---------- 3. הודעות 8-K ----------
+
+    st.divider()
+    st.markdown('<div class="section-title">📄 הודעות רשמיות לרשות ניירות ערך (8-K) — SEC EDGAR</div>', unsafe_allow_html=True)
+    st.markdown('''
+    <div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+    מדוע זה רלוונטי: חברות חייבות לדווח על עסקאות גדולות, שינויי הנהלה וחוזים משמעותיים — לרוב לפני שהתקשורת מגיעה.
+    </div>
+    ''', unsafe_allow_html=True)
+
+    if filings_8k:
+        for f in filings_8k[:8]:
+            st.markdown(f'''
+            <div class="metric-card" style="margin-bottom:10px">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                    <span style="font-size:18px; color:#00ff41; font-family:monospace">{f["ticker"]}</span>
+                    <span style="font-size:11px; color:#00aa00">{f["date"]}</span>
+                </div>
+                <div style="color:#00cc33; font-size:13px">{f["items"]}</div>
+                <div style="color:#008800; font-size:11px; margin-top:4px">
+                    <a href="{f["url"]}" target="_blank" style="color:#00cc33">לדיווח המלא ב-SEC</a>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="news-item">⚪ אין הודעות 8-K ב-14 הימים האחרונים במניות שלך</div>', unsafe_allow_html=True)
+
+    # ---------- 4. נפח מסחר חריג ----------
+
+    st.divider()
+    st.markdown('<div class="section-title">📊 נפח מסחר חריג — חריגה מהממוצע של 30 יום</div>', unsafe_allow_html=True)
+    st.markdown('''
+    <div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+    מדוע זה רלוונטי: כשפתאום סוחרים הרבה יותר ממה שרגיל — מישהו גדול נכנס. לרוב זה קורה לפני חדשות.
+    </div>
+    ''', unsafe_allow_html=True)
+
+    if volume_alerts:
+        for v in volume_alerts:
+            chg = v["change"]
+            chg_str = f'{"▲" if chg >= 0 else "▼"} {abs(chg)}% היום'
+            chg_class = "metric-up" if chg >= 0 else "metric-dn"
+            st.markdown(f'''
+            <div class="metric-card" style="margin-bottom:10px">
+                <div style="display:flex; justify-content:space-between; align-items:center">
+                    <span style="font-size:18px; color:#00ff41; font-family:monospace">{v["ticker"]}</span>
+                    <span class="badge-hold">נפח פי {v["ratio"]} מהממוצע</span>
+                </div>
+                <div class="{chg_class}" style="margin-top:6px">{chg_str}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="news-item">⚪ אין חריגות נפח כרגע — כל המניות נסחרות בנפח רגיל</div>', unsafe_allow_html=True)
+
+    # ---------- 5. אירועים קרובים ----------
+
+    st.divider()
+    st.markdown('<div class="section-title">📅 אירועים קרובים שכדאי לדעת עליהם — Finnhub</div>', unsafe_allow_html=True)
+    st.markdown('''
+    <div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+    מדוע זה רלוונטי: לפני דוחות רבעוניים ואירועי מאקרו — שווה לבדוק את כל האיתותים האחרים על אותה מניה.
+    </div>
+    ''', unsafe_allow_html=True)
+
+    if upcoming_events:
+        today_d = datetime.now().date()
+        for e in upcoming_events[:10]:
+            try:
+                ed = datetime.strptime(e["date"], "%Y-%m-%d").date()
+                days_left = (ed - today_d).days
+                when = "היום" if days_left == 0 else "מחר" if days_left == 1 else ed.strftime("%d/%m")
+                urgency = "קריטי" if days_left <= 2 else "חשוב" if days_left <= 7 else "שים לב"
+                badge = "badge-sell" if days_left <= 2 else "badge-hold" if days_left <= 7 else "badge-buy"
+            except (ValueError, TypeError):
+                when, urgency, badge = e["date"], "שים לב", "badge-buy"
+            eps = f' | תחזית EPS: {e["eps_est"]}' if e.get("eps_est") else ""
+            st.markdown(f'''
+            <div class="news-item">
+                📌 <span style="color:#00ff41; font-family:monospace">{e["ticker"]}</span> — {e["type"]}{eps}
+                <span style="color:#00aa00; font-size:11px"> | {when}</span>
+                <span class="{badge}" style="margin-right:8px; font-size:11px">{urgency}</span>
+            </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="news-item">⚪ אין אירועים ב-21 הימים הקרובים</div>', unsafe_allow_html=True)
+
+    # ---------- 6. סיכום — מה לעשות עם התיק ----------
+
+    st.divider()
+    st.markdown('<div class="section-title">💼 סיכום Claude — מה לעשות עם התיק שלי</div>', unsafe_allow_html=True)
+    st.markdown(f'''
+    <div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+    ניתוח המשלב את כל האיתותים שנאספו — לא ייעוץ פיננסי. ההחלטה הסופית תמיד שלך.
+    מקור הניתוח: {summary_source} · מתעדכן אחת לשעה
+    </div>
+    ''', unsafe_allow_html=True)
+
+    for s in portfolio_summary:
+        extra = f' — {s["n_signals"]} איתותים' if s.get("n_signals") is not None else ""
         st.markdown(f'''
         <div class="metric-card" style="margin-bottom:10px">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                <span style="font-size:22px; color:#00ff41; font-family:monospace">{t}</span>
-                <span class="badge-buy">קניית פנים {val_str}</span>
+                <span style="font-size:18px; color:#00ff41; font-family:monospace">{s["ticker"]}</span>
+                <span class="{s["badge"]}">{s["label"]}</span>
             </div>
-            <div style="color:#00aa00; font-size:12px; margin-bottom:4px">🏢 {daily_pick["company"]} {price_str}</div>
-            <div style="color:#00cc33; font-size:12px; margin-bottom:4px">👤 {daily_pick["insider"]} — {daily_pick["title"]}</div>
-            <div style="color:#008800; font-size:12px">{buzz_str}</div>
+            <div style="color:#00cc33; font-size:14px; margin-bottom:4px">{s["rec"]}</div>
+            <div style="color:#008800; font-size:12px">{s["reasons"]}{extra}</div>
         </div>
         ''', unsafe_allow_html=True)
-        with st.spinner("Claude בודק..."):
-            take = cached_claude_analysis(t)
-        st.markdown(f'<div class="analysis-card" style="font-size:12px">{take}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="news-item">⚪ לא נמצאו רכישות אנשי פנים בולטות (או שהמקור אינו זמין כרגע)</div>', unsafe_allow_html=True)
 
-with col_m:
-    st.markdown('<div class="section-title">📆 המלצת החודש</div>', unsafe_allow_html=True)
-    if monthly_pick:
-        t = monthly_pick["ticker"]
-        p, c = get_stock_info(t)
-        price_str = f"${p} ({'▲' if (c or 0) >= 0 else '▼'} {c}%)" if p else ""
-        tv = monthly_pick["total_value"]
-        tv_str = f"${tv/1e6:.1f}M" if tv >= 1e6 else f"${tv/1e3:.0f}K"
-        buzz_str = (f'🔥 מקום {monthly_pick["buzz_rank"]} בבאזז רדיט ({monthly_pick["buzz_mentions"]} אזכורים)'
-                    if monthly_pick["buzz_rank"] else "ללא באזז חריג ברדיט")
-        st.markdown(f'''
-        <div class="metric-card" style="margin-bottom:10px">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                <span style="font-size:22px; color:#00ff41; font-family:monospace">{t}</span>
-                <span class="badge-buy">{monthly_pick["count"]} רכישות פנים בחודש</span>
+    # ---------- 7. גילוי מניות — מחוץ לתיק ----------
+
+    st.divider()
+    st.markdown('<div class="section-title">🔍 גילוי מניות — המלצות מחוץ לתיק</div>', unsafe_allow_html=True)
+    st.markdown('''
+    <div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+    סריקה של כל השוק: איפה אנשי פנים קונים בכסף שלהם, משוקלל עם באזז ברדיט. מניות שכבר בתיק שלך מסוננות החוצה.
+    מקורות: OpenInsider + ApeWisdom · לא ייעוץ פיננסי.
+    </div>
+    ''', unsafe_allow_html=True)
+
+    with st.spinner("סורק את השוק..."):
+        buzz_data = get_reddit_buzz()
+        exclude_set = {s.upper() for s in selected_stocks}
+        daily_buys = scan_market_insider_buys(days=1)
+        daily_label = "היום"
+        if not daily_buys:
+            daily_buys = scan_market_insider_buys(days=3)
+            daily_label = "3 הימים האחרונים"
+        if not daily_buys:
+            # סופי שבוע ארוכים וחגים — מתרחבים לשבוע
+            daily_buys = scan_market_insider_buys(days=7)
+            daily_label = "השבוע האחרון"
+        monthly_buys = scan_market_insider_buys(days=30, min_value_k=100, max_rows=500)
+        daily_pick = pick_daily_discovery(daily_buys, buzz_data, exclude_set)
+        monthly_pick = pick_monthly_discovery(monthly_buys, buzz_data, exclude_set)
+
+    col_d, col_m = st.columns(2, gap="medium")
+
+    with col_d:
+        st.markdown(f'<div class="section-title">☀️ המלצת {daily_label}</div>', unsafe_allow_html=True)
+        if daily_pick:
+            t = daily_pick["ticker"]
+            p, c = get_stock_info(t)
+            price_str = f"${p} ({'▲' if (c or 0) >= 0 else '▼'} {c}%)" if p else ""
+            val = daily_pick["value"]
+            val_str = f"${val/1e6:.1f}M" if val >= 1e6 else f"${val/1e3:.0f}K"
+            buzz_str = (f'🔥 מקום {daily_pick["buzz_rank"]} בבאזז רדיט ({daily_pick["buzz_mentions"]} אזכורים)'
+                        if daily_pick["buzz_rank"] else "ללא באזז חריג ברדיט")
+            st.markdown(f'''
+            <div class="metric-card" style="margin-bottom:10px">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                    <span style="font-size:22px; color:#00ff41; font-family:monospace">{t}</span>
+                    <span class="badge-buy">קניית פנים {val_str}</span>
+                </div>
+                <div style="color:#00aa00; font-size:12px; margin-bottom:4px">🏢 {daily_pick["company"]} {price_str}</div>
+                <div style="color:#00cc33; font-size:12px; margin-bottom:4px">👤 {daily_pick["insider"]} — {daily_pick["title"]}</div>
+                <div style="color:#008800; font-size:12px">{buzz_str}</div>
             </div>
-            <div style="color:#00aa00; font-size:12px; margin-bottom:4px">🏢 {monthly_pick["company"]} {price_str}</div>
-            <div style="color:#00cc33; font-size:12px; margin-bottom:4px">💰 סה"כ נרכש: {tv_str}</div>
-            <div style="color:#008800; font-size:12px">{buzz_str}</div>
-        </div>
-        ''', unsafe_allow_html=True)
-        with st.spinner("Claude בודק..."):
-            take_m = cached_claude_analysis(t)
-        st.markdown(f'<div class="analysis-card" style="font-size:12px">{take_m}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="news-item">⚪ לא נמצאו נתונים חודשיים (או שהמקור אינו זמין כרגע)</div>', unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
+            with st.spinner("Claude בודק..."):
+                take = cached_claude_analysis(t)
+            st.markdown(f'<div class="analysis-card" style="font-size:12px">{take}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="news-item">⚪ לא נמצאו רכישות אנשי פנים בולטות (או שהמקור אינו זמין כרגע)</div>', unsafe_allow_html=True)
+
+    with col_m:
+        st.markdown('<div class="section-title">📆 המלצת החודש</div>', unsafe_allow_html=True)
+        if monthly_pick:
+            t = monthly_pick["ticker"]
+            p, c = get_stock_info(t)
+            price_str = f"${p} ({'▲' if (c or 0) >= 0 else '▼'} {c}%)" if p else ""
+            tv = monthly_pick["total_value"]
+            tv_str = f"${tv/1e6:.1f}M" if tv >= 1e6 else f"${tv/1e3:.0f}K"
+            buzz_str = (f'🔥 מקום {monthly_pick["buzz_rank"]} בבאזז רדיט ({monthly_pick["buzz_mentions"]} אזכורים)'
+                        if monthly_pick["buzz_rank"] else "ללא באזז חריג ברדיט")
+            st.markdown(f'''
+            <div class="metric-card" style="margin-bottom:10px">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                    <span style="font-size:22px; color:#00ff41; font-family:monospace">{t}</span>
+                    <span class="badge-buy">{monthly_pick["count"]} רכישות פנים בחודש</span>
+                </div>
+                <div style="color:#00aa00; font-size:12px; margin-bottom:4px">🏢 {monthly_pick["company"]} {price_str}</div>
+                <div style="color:#00cc33; font-size:12px; margin-bottom:4px">💰 סה"כ נרכש: {tv_str}</div>
+                <div style="color:#008800; font-size:12px">{buzz_str}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+            with st.spinner("Claude בודק..."):
+                take_m = cached_claude_analysis(t)
+            st.markdown(f'<div class="analysis-card" style="font-size:12px">{take_m}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="news-item">⚪ לא נמצאו נתונים חודשיים (או שהמקור אינו זמין כרגע)</div>', unsafe_allow_html=True)
