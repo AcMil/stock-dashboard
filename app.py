@@ -116,7 +116,7 @@ h1, h2, h3 {
     direction: rtl;
     background: #1f2025 !important;
     border: 0.5px solid #2e2f36;
-    border-radius: 999px !important;
+    border-radius: 16px !important;
     padding: 5px !important;
     width: fit-content;
 }
@@ -127,7 +127,7 @@ h1, h2, h3 {
     font-size: 14px;
     background: transparent !important;
     border: none !important;
-    border-radius: 999px !important;
+    border-radius: 14px !important;
     padding: 8px 26px !important;
     height: auto !important;
     min-width: 120px;
@@ -145,7 +145,7 @@ h1, h2, h3 {
 .stTabs [aria-selected="true"] {
     color: #17181c !important;
     background: #e2b45f !important;
-    border-radius: 999px !important;
+    border-radius: 14px !important;
     font-weight: 500;
 }
 
