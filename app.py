@@ -112,30 +112,44 @@ h1, h2, h3 {
 }
 
 .stTabs [data-baseweb="tab-list"] {
-    gap: 4px;
+    gap: 5px;
     direction: rtl;
     background: #1f2025;
+    border: 0.5px solid #2e2f36;
     border-radius: 10px;
-    padding: 4px;
+    padding: 5px;
     width: fit-content;
-    border-bottom: none;
 }
 
 .stTabs [data-baseweb="tab"] {
-    color: #9a998f;
+    color: #b3b1a8;
     font-family: 'Heebo', sans-serif;
+    font-size: 14px;
     background: transparent;
     border: none;
     border-radius: 7px;
-    padding: 7px 18px;
+    padding: 8px 24px;
+    min-width: 120px;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
-.stTabs [data-baseweb="tab"] p { color: inherit !important; }
+.stTabs [data-baseweb="tab"]:hover {
+    background: #26272d;
+    color: #ece9e2;
+}
+
+.stTabs [data-baseweb="tab"] p { color: inherit !important; font-size: 14px !important; }
 
 .stTabs [aria-selected="true"] {
     color: #17181c !important;
     background: #e2b45f;
     font-weight: 500;
+}
+
+.stTabs [aria-selected="true"]:hover {
+    background: #e2b45f;
+    color: #17181c;
 }
 
 .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {
@@ -344,7 +358,7 @@ with st.expander("⚙️ הגדרות", expanded=False):
             st.rerun()
 
 tab_prices, tab_analysis, tab_signals, tab_news = st.tabs(
-    ["📊 מחירים", "🤖 ניתוח Claude", "🛰️ איתותים והמלצות", "📰 חדשות"]
+    ["מחירים", "ניתוח Claude", "איתותים והמלצות", "חדשות"]
 )
 
 with tab_prices:
