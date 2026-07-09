@@ -114,10 +114,10 @@ h1, h2, h3 {
 .stTabs [data-baseweb="tab-list"] {
     gap: 5px;
     direction: rtl;
-    background: #1f2025;
+    background: #1f2025 !important;
     border: 0.5px solid #2e2f36;
-    border-radius: 10px;
-    padding: 5px;
+    border-radius: 999px !important;
+    padding: 5px !important;
     width: fit-content;
 }
 
@@ -125,17 +125,18 @@ h1, h2, h3 {
     color: #b3b1a8;
     font-family: 'Heebo', sans-serif;
     font-size: 14px;
-    background: transparent;
-    border: none;
-    border-radius: 7px;
-    padding: 8px 24px;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 999px !important;
+    padding: 8px 26px !important;
+    height: auto !important;
     min-width: 120px;
     justify-content: center;
     transition: background 0.15s ease, color 0.15s ease;
 }
 
 .stTabs [data-baseweb="tab"]:hover {
-    background: #26272d;
+    background: #26272d !important;
     color: #ece9e2;
 }
 
@@ -143,12 +144,13 @@ h1, h2, h3 {
 
 .stTabs [aria-selected="true"] {
     color: #17181c !important;
-    background: #e2b45f;
+    background: #e2b45f !important;
+    border-radius: 999px !important;
     font-weight: 500;
 }
 
 .stTabs [aria-selected="true"]:hover {
-    background: #e2b45f;
+    background: #e2b45f !important;
     color: #17181c;
 }
 
