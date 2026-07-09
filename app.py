@@ -114,8 +114,8 @@ h1, h2, h3 {
 .stTabs [data-baseweb="tab-list"] {
     gap: 5px;
     direction: rtl;
-    background: #1f2025 !important;
-    border: 0.5px solid #2e2f36;
+    background: #22232a !important;
+    border: 0.5px solid #35363e !important;
     border-radius: 16px !important;
     padding: 5px !important;
     width: fit-content;
@@ -128,19 +128,20 @@ h1, h2, h3 {
     background: transparent !important;
     border: none !important;
     border-radius: 14px !important;
-    padding: 8px 26px !important;
-    height: auto !important;
-    min-width: 120px;
+    padding: 0 26px !important;
+    height: 38px !important;
+    min-width: 120px !important;
     justify-content: center;
+    align-items: center;
     transition: background 0.15s ease, color 0.15s ease;
 }
 
 .stTabs [data-baseweb="tab"]:hover {
-    background: #26272d !important;
+    background: #2b2c33 !important;
     color: #ece9e2;
 }
 
-.stTabs [data-baseweb="tab"] p { color: inherit !important; font-size: 14px !important; }
+.stTabs [data-baseweb="tab"] p { color: inherit !important; font-size: 14px !important; margin: 0 !important; }
 
 .stTabs [aria-selected="true"] {
     color: #17181c !important;
@@ -154,8 +155,12 @@ h1, h2, h3 {
     color: #17181c;
 }
 
-.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {
-    display: none;
+.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"],
+[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+[data-testid="stTabs"] [data-baseweb="tab-border"] {
+    display: none !important;
+    background: transparent !important;
+    height: 0 !important;
 }
 
 [data-testid="stSidebar"] {
