@@ -26,19 +26,16 @@ st.set_page_config(page_title="דשבורד מניות", page_icon="📈", layou
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 html, body, [class*="css"] {
     direction: rtl;
     text-align: right;
+    font-family: 'Heebo', sans-serif;
 }
 
 .stApp {
-    background-color: #000000;
-    background-image: 
-        linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px);
-    background-size: 14px 14px;
+    background-color: #17181c;
 }
 
 .block-container {
@@ -47,108 +44,111 @@ html, body, [class*="css"] {
 }
 
 h1, h2, h3 {
-    color: #00ff41 !important;
-    font-family: 'Share Tech Mono', monospace !important;
+    color: #ece9e2 !important;
+    font-family: 'Heebo', sans-serif !important;
     text-align: right;
-    text-shadow: 0 0 8px #00ff41;
+    font-weight: 700;
 }
 
 .metric-card {
-    background: rgba(0, 15, 0, 0.85);
-    border: 1px solid rgba(0,255,65,0.4);
+    background: #1e1f24;
+    border: 0.5px solid #2e2f36;
     border-radius: 10px;
-    padding: 12px;
+    padding: 14px 16px;
     text-align: right;
-    box-shadow: inset 0 0 20px rgba(0,255,65,0.05);
     width: 100%;
 }
 
 .metric-label {
-    font-size: 11px;
-    color: #00cc33;
-    letter-spacing: 0.05em;
+    font-size: 12px;
+    color: #8b8a83;
+    letter-spacing: 0.04em;
     margin-bottom: 4px;
-    font-family: 'Share Tech Mono', monospace;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .metric-value {
     font-size: 24px;
-    font-weight: 500;
-    color: #00ff41;
-    font-family: 'Share Tech Mono', monospace;
-    text-shadow: 0 0 6px rgba(0,255,65,0.5);
+    font-weight: 600;
+    color: #ece9e2;
+    font-family: 'JetBrains Mono', monospace;
 }
 
-.metric-up { color: #4ade80; font-size: 13px; text-shadow: 0 0 4px rgba(74,222,128,0.5); }
-.metric-dn { color: #f87171; font-size: 13px; text-shadow: 0 0 4px rgba(248,113,113,0.5); }
+.metric-up { color: #7fc796; font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+.metric-dn { color: #e07b72; font-size: 13px; font-family: 'JetBrains Mono', monospace; }
 
 .analysis-card {
-    background: rgba(0, 15, 0, 0.85);
-    border: 1px solid rgba(0,255,65,0.4);
+    background: #1e1f24;
+    border: 0.5px solid #2e2f36;
     border-radius: 10px;
     padding: 1rem 1.25rem;
     margin-bottom: 12px;
     text-align: right;
-    color: #00ee44;
-    line-height: 1.8;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 14px;
+    color: #c9c6bd;
+    line-height: 1.7;
+    font-family: 'Heebo', sans-serif;
+    font-size: 14.5px;
 }
 
-.badge-buy  { background:#14532d; color:#4ade80; border:1px solid #00cc00; padding:4px 14px; border-radius:6px; font-size:12px; font-family:monospace; }
-.badge-hold { background:#451a03; color:#fb923c; border:1px solid #fb923c; padding:4px 14px; border-radius:6px; font-size:12px; font-family:monospace; }
-.badge-sell { background:#450a0a; color:#f87171; border:1px solid #f87171; padding:4px 14px; border-radius:6px; font-size:12px; font-family:monospace; }
+.badge-buy  { background:#1e2d23; color:#7fc796; border:1px solid #2f4a38; padding:4px 14px; border-radius:6px; font-size:12.5px; font-weight:500; }
+.badge-hold { background:#33291a; color:#e2b45f; border:1px solid #4a3d24; padding:4px 14px; border-radius:6px; font-size:12.5px; font-weight:500; }
+.badge-sell { background:#33201f; color:#e07b72; border:1px solid #4a2e2c; padding:4px 14px; border-radius:6px; font-size:12.5px; font-weight:500; }
 
 .news-item {
-    padding: 8px 0;
-    border-bottom: 0.5px solid rgba(0,255,65,0.15);
-    color: #00cc33;
-    font-size: 13px;
+    padding: 9px 0;
+    border-bottom: 0.5px solid rgba(236,233,226,0.08);
+    color: #c9c6bd;
+    font-size: 13.5px;
     text-align: right;
-    font-family: 'Share Tech Mono', monospace;
 }
 
 .section-title {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
-    color: #00aa00;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 10px;
+    color: #e2b45f;
+    letter-spacing: 0.05em;
+    margin: 4px 0 10px;
     text-align: right;
-    font-family: 'Share Tech Mono', monospace;
 }
 
 .stTabs [data-baseweb="tab-list"] {
-    gap: 6px;
+    gap: 4px;
     direction: rtl;
-    border-bottom: 1px solid rgba(0,255,65,0.25);
+    background: #1f2025;
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+    border-bottom: none;
 }
 
 .stTabs [data-baseweb="tab"] {
-    color: #00aa00;
-    font-family: 'Share Tech Mono', monospace;
-    background: rgba(0,15,0,0.6);
-    border: 1px solid rgba(0,255,65,0.25);
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-    padding: 6px 16px;
+    color: #9a998f;
+    font-family: 'Heebo', sans-serif;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 18px;
 }
 
+.stTabs [data-baseweb="tab"] p { color: inherit !important; }
+
 .stTabs [aria-selected="true"] {
-    color: #00ff41 !important;
-    border-color: rgba(0,255,65,0.7);
-    text-shadow: 0 0 6px rgba(0,255,65,0.6);
-    background: rgba(0,25,0,0.9);
+    color: #17181c !important;
+    background: #e2b45f;
+    font-weight: 500;
+}
+
+.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {
+    display: none;
 }
 
 [data-testid="stSidebar"] {
-    background-color: rgba(0, 10, 0, 0.95) !important;
-    border-left: 1px solid rgba(0,255,65,0.2);
+    background-color: #17181c !important;
+    border-left: 1px solid #2a2b31;
 }
 
-[data-testid="stMetricValue"] { color: #00ff41 !important; }
-[data-testid="stMetricDelta"] { color: #4ade80 !important; }
+[data-testid="stMetricValue"] { color: #ece9e2 !important; }
+[data-testid="stMetricDelta"] { color: #7fc796 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -194,7 +194,7 @@ def check_login():
 if not check_login():
     st.stop()
 
-st.markdown(f'<p style="color:#00aa00;text-align:right">עדכון אחרון: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>', unsafe_allow_html=True)
+st.markdown(f'<p style="color:#9a998f;text-align:right">עדכון אחרון: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>', unsafe_allow_html=True)
 st.divider()
 
 STOCKS = ["AMZN", "ESLT", "FSLR", "IDR", "NVDA", "TSLA", "TSM"]
@@ -409,11 +409,11 @@ with tab_analysis:
                 <div class="metric-value">${price}</div>
                 <div class="{delta_class}">{arrow} {change}%</div>
                 <div style="margin-top:8px">
-                    <div class="strack-wrap" style="height:3px;background:rgba(0,200,0,0.15);border-radius:2px;margin-bottom:6px">
-                        <div style="width:{score_tmp*10}%;height:100%;background:{'#4ade80' if score_tmp>=7 else '#fb923c' if score_tmp>=5 else '#f87171'};border-radius:2px"></div>
+                    <div class="strack-wrap" style="height:3px;background:rgba(236,233,226,0.1);border-radius:2px;margin-bottom:6px">
+                        <div style="width:{score_tmp*10}%;height:100%;background:{'#7fc796' if score_tmp>=7 else '#e2b45f' if score_tmp>=5 else '#e07b72'};border-radius:2px"></div>
                     </div>
                     <span class="{badge}">{rec_tmp}</span>
-                    <span style="font-size:11px;color:#00aa00;margin-right:6px">{score_tmp}/10</span>
+                    <span style="font-size:11px;color:#9a998f;margin-right:6px">{score_tmp}/10</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -432,26 +432,26 @@ with tab_prices:
                 x=hist.index,
                 y=hist['Close'],
                 mode='lines',
-                line=dict(color='#00ff41', width=1.5),
+                line=dict(color='#e2b45f', width=1.5),
                 fill='tozeroy',
-                fillcolor='rgba(0,255,65,0.05)',
+                fillcolor='rgba(226,180,95,0.06)',
                 name=selected_stock
             ))
             fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,15,0,0.85)',
-                font=dict(color='#00aa00', family='monospace'),
+                plot_bgcolor='rgba(30,31,36,0.9)',
+                font=dict(color='#8b8a83', family='JetBrains Mono, monospace'),
                 margin=dict(l=40, r=20, t=20, b=40),
                 height=300,
                 xaxis=dict(
-                    gridcolor='rgba(0,255,65,0.1)',
+                    gridcolor='rgba(236,233,226,0.07)',
                     showgrid=True,
-                    color='#00aa00'
+                    color='#9a998f'
                 ),
                 yaxis=dict(
-                    gridcolor='rgba(0,255,65,0.1)',
+                    gridcolor='rgba(236,233,226,0.07)',
                     showgrid=True,
-                    color='#00aa00'
+                    color='#9a998f'
                 ),
                 showlegend=False
             )
@@ -467,7 +467,7 @@ with tab_news:
     st.markdown('<div class="section-title">חדשות אחרונות</div>', unsafe_allow_html=True)
     if news:
         for item in news:
-            st.markdown(f'<div class="news-item">📌 {item["כותרת"]} — <span style="color:#006600">{item["מקור"]}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="news-item">📌 {item["כותרת"]} — <span style="color:#8b8a83">{item["מקור"]}</span></div>', unsafe_allow_html=True)
     else:
         st.warning("לא נמצאו חדשות")
 
@@ -1228,7 +1228,7 @@ with tab_signals:
         <div class="metric-card">
             <div class="metric-label">{label}</div>
             <div class="metric-value">{value}</div>
-            <div style="font-size:11px;color:#00aa00">{sub}</div>
+            <div style="font-size:11px;color:#9a998f">{sub}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1252,11 +1252,11 @@ with tab_signals:
             st.markdown(f'''
             <div class="metric-card" style="margin-bottom:10px">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                    <span style="font-size:18px; color:#00ff41; font-family:monospace">{tr["ticker"]}</span>
+                    <span style="font-size:18px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{tr["ticker"]}</span>
                     <span class="{badge}">{label}</span>
                 </div>
-                <div style="color:#00aa00; font-size:12px">👤 {tr["name"]}{role}{amount}</div>
-                <div style="color:#008800; font-size:11px; margin-top:4px">דווח: {tr["date"]} · מקור: {congress_source}</div>
+                <div style="color:#9a998f; font-size:12px">👤 {tr["name"]}{role}{amount}</div>
+                <div style="color:#8b8a83; font-size:11px; margin-top:4px">דווח: {tr["date"]} · מקור: {congress_source}</div>
             </div>
             ''', unsafe_allow_html=True)
     else:
@@ -1282,12 +1282,12 @@ with tab_signals:
             st.markdown(f'''
             <div class="metric-card" style="margin-bottom:10px">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                    <span style="font-size:18px; color:#00ff41; font-family:monospace">{tr["ticker"]}</span>
+                    <span style="font-size:18px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{tr["ticker"]}</span>
                     <span class="{badge}">{label} {val_str}</span>
                 </div>
-                <div style="color:#00aa00; font-size:12px">👤 {tr["owner"]} — {tr["title"]}</div>
-                <div style="color:#008800; font-size:11px; margin-top:4px">
-                    דווח: {tr["date"]} · <a href="{tr["url"]}" target="_blank" style="color:#00cc33">לדיווח המלא ב-SEC</a>
+                <div style="color:#9a998f; font-size:12px">👤 {tr["owner"]} — {tr["title"]}</div>
+                <div style="color:#8b8a83; font-size:11px; margin-top:4px">
+                    דווח: {tr["date"]} · <a href="{tr["url"]}" target="_blank" style="color:#c9c6bd">לדיווח המלא ב-SEC</a>
                 </div>
             </div>
             ''', unsafe_allow_html=True)
@@ -1309,12 +1309,12 @@ with tab_signals:
             st.markdown(f'''
             <div class="metric-card" style="margin-bottom:10px">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                    <span style="font-size:18px; color:#00ff41; font-family:monospace">{f["ticker"]}</span>
-                    <span style="font-size:11px; color:#00aa00">{f["date"]}</span>
+                    <span style="font-size:18px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{f["ticker"]}</span>
+                    <span style="font-size:11px; color:#9a998f">{f["date"]}</span>
                 </div>
-                <div style="color:#00cc33; font-size:13px">{f["items"]}</div>
-                <div style="color:#008800; font-size:11px; margin-top:4px">
-                    <a href="{f["url"]}" target="_blank" style="color:#00cc33">לדיווח המלא ב-SEC</a>
+                <div style="color:#c9c6bd; font-size:13px">{f["items"]}</div>
+                <div style="color:#8b8a83; font-size:11px; margin-top:4px">
+                    <a href="{f["url"]}" target="_blank" style="color:#c9c6bd">לדיווח המלא ב-SEC</a>
                 </div>
             </div>
             ''', unsafe_allow_html=True)
@@ -1339,7 +1339,7 @@ with tab_signals:
             st.markdown(f'''
             <div class="metric-card" style="margin-bottom:10px">
                 <div style="display:flex; justify-content:space-between; align-items:center">
-                    <span style="font-size:18px; color:#00ff41; font-family:monospace">{v["ticker"]}</span>
+                    <span style="font-size:18px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{v["ticker"]}</span>
                     <span class="badge-hold">נפח פי {v["ratio"]} מהממוצע</span>
                 </div>
                 <div class="{chg_class}" style="margin-top:6px">{chg_str}</div>
@@ -1372,8 +1372,8 @@ with tab_signals:
             eps = f' | תחזית EPS: {e["eps_est"]}' if e.get("eps_est") else ""
             st.markdown(f'''
             <div class="news-item">
-                📌 <span style="color:#00ff41; font-family:monospace">{e["ticker"]}</span> — {e["type"]}{eps}
-                <span style="color:#00aa00; font-size:11px"> | {when}</span>
+                📌 <span style="color:#ece9e2; font-family:'JetBrains Mono',monospace">{e["ticker"]}</span> — {e["type"]}{eps}
+                <span style="color:#9a998f; font-size:11px"> | {when}</span>
                 <span class="{badge}" style="margin-right:8px; font-size:11px">{urgency}</span>
             </div>
             ''', unsafe_allow_html=True)
@@ -1396,11 +1396,11 @@ with tab_signals:
         st.markdown(f'''
         <div class="metric-card" style="margin-bottom:10px">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                <span style="font-size:18px; color:#00ff41; font-family:monospace">{s["ticker"]}</span>
+                <span style="font-size:18px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{s["ticker"]}</span>
                 <span class="{s["badge"]}">{s["label"]}</span>
             </div>
-            <div style="color:#00cc33; font-size:14px; margin-bottom:4px">{s["rec"]}</div>
-            <div style="color:#008800; font-size:12px">{s["reasons"]}{extra}</div>
+            <div style="color:#c9c6bd; font-size:14px; margin-bottom:4px">{s["rec"]}</div>
+            <div style="color:#8b8a83; font-size:12px">{s["reasons"]}{extra}</div>
         </div>
         ''', unsafe_allow_html=True)
 
@@ -1446,12 +1446,12 @@ with tab_signals:
             st.markdown(f'''
             <div class="metric-card" style="margin-bottom:10px">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                    <span style="font-size:22px; color:#00ff41; font-family:monospace">{t}</span>
+                    <span style="font-size:22px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{t}</span>
                     <span class="badge-buy">קניית פנים {val_str}</span>
                 </div>
-                <div style="color:#00aa00; font-size:12px; margin-bottom:4px">🏢 {daily_pick["company"]} {price_str}</div>
-                <div style="color:#00cc33; font-size:12px; margin-bottom:4px">👤 {daily_pick["insider"]} — {daily_pick["title"]}</div>
-                <div style="color:#008800; font-size:12px">{buzz_str}</div>
+                <div style="color:#9a998f; font-size:12px; margin-bottom:4px">🏢 {daily_pick["company"]} {price_str}</div>
+                <div style="color:#c9c6bd; font-size:12px; margin-bottom:4px">👤 {daily_pick["insider"]} — {daily_pick["title"]}</div>
+                <div style="color:#8b8a83; font-size:12px">{buzz_str}</div>
             </div>
             ''', unsafe_allow_html=True)
             with st.spinner("Claude בודק..."):
@@ -1473,12 +1473,12 @@ with tab_signals:
             st.markdown(f'''
             <div class="metric-card" style="margin-bottom:10px">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-                    <span style="font-size:22px; color:#00ff41; font-family:monospace">{t}</span>
+                    <span style="font-size:22px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{t}</span>
                     <span class="badge-buy">{monthly_pick["count"]} רכישות פנים בחודש</span>
                 </div>
-                <div style="color:#00aa00; font-size:12px; margin-bottom:4px">🏢 {monthly_pick["company"]} {price_str}</div>
-                <div style="color:#00cc33; font-size:12px; margin-bottom:4px">💰 סה"כ נרכש: {tv_str}</div>
-                <div style="color:#008800; font-size:12px">{buzz_str}</div>
+                <div style="color:#9a998f; font-size:12px; margin-bottom:4px">🏢 {monthly_pick["company"]} {price_str}</div>
+                <div style="color:#c9c6bd; font-size:12px; margin-bottom:4px">💰 סה"כ נרכש: {tv_str}</div>
+                <div style="color:#8b8a83; font-size:12px">{buzz_str}</div>
             </div>
             ''', unsafe_allow_html=True)
             with st.spinner("Claude בודק..."):
