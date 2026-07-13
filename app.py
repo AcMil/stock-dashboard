@@ -367,7 +367,6 @@ with st.expander("⚙️ הגדרות", expanded=False):
 tab_radar, tab_prices, tab_analysis, tab_signals, tab_news = st.tabs(
     ["📡 רדאר", "מחירים", "ניתוח Claude", "איתותים והמלצות", "חדשות"]
 )
-)
 
 with tab_prices:
     st.markdown('<div class="section-title">מחירים עכשוויים</div>', unsafe_allow_html=True)
