@@ -365,7 +365,7 @@ with st.expander("⚙️ הגדרות", expanded=False):
             st.rerun()
 
 tab_radar, tab_prices, tab_analysis, tab_signals, tab_news = st.tabs(
-    ["📡 רדאר", "מחירים", "ניתוח Claude", "איתותים והמלצות", "חדשות"]
+    [" רדאר", "מחירים", "ניתוח Claude", "איתותים והמלצות", "חדשות"]
 )
 
 with tab_prices:
