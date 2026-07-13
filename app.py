@@ -364,8 +364,9 @@ with st.expander("⚙️ הגדרות", expanded=False):
             st.session_state["authenticated"] = False
             st.rerun()
 
-tab_prices, tab_analysis, tab_signals, tab_news = st.tabs(
-    ["מחירים", "ניתוח Claude", "איתותים והמלצות", "חדשות"]
+tab_radar, tab_prices, tab_analysis, tab_signals, tab_news = st.tabs(
+    ["📡 רדאר", "מחירים", "ניתוח Claude", "איתותים והמלצות", "חדשות"]
+)
 )
 
 with tab_prices:
@@ -1507,3 +1508,181 @@ with tab_signals:
             st.markdown(f'<div class="analysis-card" style="font-size:12px">{take_m}</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="news-item">⚪ לא נמצאו נתונים חודשיים (או שהמקור אינו זמין כרגע)</div>', unsafe_allow_html=True)
+
+# ============================================================
+# 📡 שלב 1 — מנוע הסריקה: רדאר קנייה מקובצת (Cluster Buying)
+# 📡 שלב 2 — אימות רב-גורמי (Multi-Factor Validation)
+# ============================================================
+
+CLUSTER_WINDOW_DAYS = 30      # חלון הזמן לזיהוי הקבוצה
+CLUSTER_MIN_VALUE_K = 50      # רף מינימלי לעסקה בודדת (באלפי $)
+CLUSTER_MIN_INSIDERS = 2      # מספר אינסיידרים שונים מינימלי
+MAX_MARKET_CAP = 5_000_000_000  # שווי שוק מקסימלי
+MAX_PEG = 1.5                   # PEG מקסימלי (אין נתון = פסילה)
+VOLUME_SPIKE_RATIO = 1.5        # נפח היום מול ממוצע 30 יום
+MAX_TICKERS_TO_VALIDATE = 30    # מגבלת עומס על yfinance
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_cluster_candidates():
+    """סורק את כל השוק ומחזיר DataFrame של קניות מקובצות, ממוין לפי חוזק האיתות"""
+    buys = scan_market_insider_buys(
+        days=CLUSTER_WINDOW_DAYS,
+        min_value_k=CLUSTER_MIN_VALUE_K,
+        max_rows=1000,
+    )
+    if not buys:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(buys)
+    df["insider"] = df["insider"].astype(str).str.strip()
+    df = df[df["insider"] != ""]
+    if df.empty:
+        return pd.DataFrame()
+
+    cluster_summary = df.groupby("ticker").agg(
+        company=("company", "first"),
+        unique_insiders=("insider", "nunique"),
+        n_purchases=("insider", "size"),
+        total_value=("value", "sum"),
+        latest_date=("date", "max"),
+        insider_roles=("title", lambda x: sorted({str(t).strip() for t in x if str(t).strip()})),
+    ).reset_index()
+
+    active = cluster_summary[
+        cluster_summary["unique_insiders"] >= CLUSTER_MIN_INSIDERS
+    ].copy()
+
+    return active.sort_values(
+        ["unique_insiders", "total_value"], ascending=[False, False]
+    ).reset_index(drop=True)
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_fundamentals(ticker):
+    """שולף שווי שוק, PEG ויחס נפח עבור טיקר בודד (מטמון לשעה)"""
+    try:
+        tk = yf.Ticker(ticker)
+        info = tk.info or {}
+        mcap = info.get("marketCap")
+        peg = info.get("trailingPegRatio") or info.get("pegRatio")
+        try:
+            peg = float(peg) if peg is not None else None
+        except (ValueError, TypeError):
+            peg = None
+
+        vol_ratio = None
+        hist = tk.history(period="3mo")
+        if len(hist) >= 25:
+            last_vol = float(hist["Volume"].iloc[-1])
+            avg_vol = float(hist["Volume"].iloc[-31:-1].mean())
+            if avg_vol > 0:
+                vol_ratio = round(last_vol / avg_vol, 2)
+
+        return {"mcap": mcap, "peg": peg, "vol_ratio": vol_ratio}
+    except Exception:
+        return None
+
+def validate_clusters(clusters_df, require_volume=True):
+    """מריץ את שלושת הפילטרים על מועמדות הרדאר. מחזיר (עברו, נפסלו)"""
+    passed, rejected = [], []
+    for _, row in clusters_df.head(MAX_TICKERS_TO_VALIDATE).iterrows():
+        t = row["ticker"]
+        f = get_fundamentals(t)
+        time.sleep(0.1)  # נימוס כלפי Yahoo
+
+        if not f or f["mcap"] is None:
+            rejected.append({**row.to_dict(), "reason": "אין נתונים ב-Yahoo"})
+            continue
+        if f["mcap"] > MAX_MARKET_CAP:
+            mcap_b = f["mcap"] / 1e9
+            rejected.append({**row.to_dict(), "reason": f"שווי שוק ${mcap_b:.1f}B — גדול מדי"})
+            continue
+        if f["peg"] is None:
+            rejected.append({**row.to_dict(), "reason": "אין נתון PEG"})
+            continue
+        if f["peg"] > MAX_PEG:
+            rejected.append({**row.to_dict(), "reason": f"PEG {f['peg']:.2f} — מעל {MAX_PEG}"})
+            continue
+        if require_volume and (f["vol_ratio"] is None or f["vol_ratio"] < VOLUME_SPIKE_RATIO):
+            vr = f"פי {f['vol_ratio']}" if f["vol_ratio"] else "לא זמין"
+            rejected.append({**row.to_dict(), "reason": f"אין נפח חריג (נפח {vr})"})
+            continue
+
+        passed.append({**row.to_dict(), **f})
+    return passed, rejected
+
+with tab_radar:
+    st.markdown('<h3 style="text-align:right">📡 רדאר איתור מוקדם</h3>', unsafe_allow_html=True)
+    st.markdown(f'''
+    <div class="analysis-card" style="font-size:12px; padding: 8px 14px;">
+    שלב א': קנייה מקובצת — לפחות {CLUSTER_MIN_INSIDERS} אינסיידרים שקנו בשוק הפתוח ב-{CLUSTER_WINDOW_DAYS} יום, ${CLUSTER_MIN_VALUE_K}K+ לעסקה.
+    שלב ב': אימות פונדמנטלי — שווי שוק עד $5B, PEG עד {MAX_PEG} (אין נתון = פסילה), נפח חריג.
+    מקורות: OpenInsider + Yahoo Finance · לא ייעוץ פיננסי.
+    </div>
+    ''', unsafe_allow_html=True)
+
+    require_vol = st.toggle(
+        f"🔥 דרוש נפח חריג (פי {VOLUME_SPIKE_RATIO} מהממוצע)",
+        value=True,
+        help="כיבוי המתג ירחיב את הרדאר גם לחברות שהנפח בהן עדיין רגיל",
+    )
+
+    with st.spinner("סורק את השוק ומאמת נתונים פונדמנטליים (עד דקה בטעינה ראשונה)..."):
+        clusters = get_cluster_candidates()
+        finalists, rejected = ([], []) if clusters.empty else validate_clusters(clusters, require_vol)
+
+    if clusters.empty:
+        st.markdown('<div class="news-item">⚪ לא נמצאו קניות מקובצות כרגע (או ש-OpenInsider אינו זמין)</div>', unsafe_allow_html=True)
+    else:
+        hdr_r = st.columns(3, gap="small")
+        hdr_r_items = [
+            ("קניות מקובצות", f"{len(clusters)}", f"חלון של {CLUSTER_WINDOW_DAYS} יום"),
+            ("עברו את כל הפילטרים", f"{len(finalists)}", "מניות הרדאר"),
+            ("נפסלו באימות", f"{len(rejected)}", "פירוט למטה"),
+        ]
+        for col, (label, value, sub) in zip(hdr_r, hdr_r_items):
+            col.markdown(f'''
+            <div class="metric-card">
+                <div class="metric-label">{label}</div>
+                <div class="metric-value">{value}</div>
+                <div style="font-size:11px;color:#9a998f">{sub}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        st.divider()
+
+        if not finalists:
+            st.markdown('<div class="news-item">⚪ אף חברה לא עברה את כל הפילטרים כרגע — זה תקין, הרדאר בכוונה קפדני. נסה לכבות את מתג הנפח החריג.</div>', unsafe_allow_html=True)
+        else:
+            in_portfolio = {s.upper() for s in selected_stocks}
+            for row in finalists:
+                val = row["total_value"]
+                val_str = f"${val/1e6:.1f}M" if val >= 1e6 else f"${val/1e3:.0f}K"
+                mcap_str = f'${row["mcap"]/1e9:.2f}B' if row["mcap"] >= 1e9 else f'${row["mcap"]/1e6:.0f}M'
+                roles = " · ".join(row["insider_roles"][:3]) or "אנשי פנים"
+                vol_badge = (f'<span class="badge-hold" style="margin-right:6px">🔥 נפח פי {row["vol_ratio"]}</span>'
+                             if row["vol_ratio"] and row["vol_ratio"] >= VOLUME_SPIKE_RATIO else "")
+                mine = '<span class="badge-hold" style="margin-right:6px">בתיק שלך</span>' if row["ticker"] in in_portfolio else ""
+                st.markdown(f'''
+                <div class="metric-card" style="margin-bottom:10px">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                        <span style="font-size:18px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{row["ticker"]}</span>
+                        <span><span class="badge-buy">{row["unique_insiders"]} אינסיידרים · {val_str}</span>{vol_badge}{mine}</span>
+                    </div>
+                    <div style="color:#9a998f; font-size:12px; margin-bottom:4px">🏢 {row["company"]} · שווי שוק {mcap_str} · PEG {row["peg"]:.2f}</div>
+                    <div style="color:#c9c6bd; font-size:12px; margin-bottom:4px">👥 {roles} · {row["n_purchases"]} רכישות</div>
+                    <div style="color:#8b8a83; font-size:11px">רכישה אחרונה: {row["latest_date"]}</div>
+                </div>
+                ''', unsafe_allow_html=True)
+
+        if rejected:
+            with st.expander(f"🚫 נפסלו באימות ({len(rejected)})"):
+                for r in rejected:
+                    st.markdown(f'''
+                    <div class="news-item">
+                        <span style="color:#ece9e2; font-family:'JetBrains Mono',monospace">{r["ticker"]}</span>
+                        — {r["unique_insiders"]} אינסיידרים · <span style="color:#e07b72">{r["reason"]}</span>
+                    </div>
+                    ''', unsafe_allow_html=True)
+
+        if len(clusters) > MAX_TICKERS_TO_VALIDATE:
+            st.markdown(f'<div class="news-item">אומתו {MAX_TICKERS_TO_VALIDATE} הקבוצות החזקות מתוך {len(clusters)}</div>', unsafe_allow_html=True)
