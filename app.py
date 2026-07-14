@@ -1509,8 +1509,8 @@ with tab_signals:
             st.markdown('<div class="news-item">⚪ לא נמצאו נתונים חודשיים (או שהמקור אינו זמין כרגע)</div>', unsafe_allow_html=True)
 
 # ============================================================
-# 📡 שלב 1 — מנוע הסריקה: רדאר קנייה מקובצת (Cluster Buying)
-# 📡 שלב 2 — אימות רב-גורמי (Multi-Factor Validation)
+# 📡 רדאר איתור מוקדם — שלב 1: מנוע סריקה (Cluster Buying)
+#                       שלב 2: אימות רב-גורמי
 # ============================================================
 
 CLUSTER_WINDOW_DAYS = 30      # חלון הזמן לזיהוי הקבוצה
@@ -1609,6 +1609,8 @@ def validate_clusters(clusters_df, require_volume=True):
         passed.append({**row.to_dict(), **f})
     return passed, rejected
 
+# ---------- טקסטים לחלוניות ההסבר (ⓘ) ----------
+
 RADAR_HELP = {
     "main": """**איך הרדאר עובד?**
 
@@ -1653,6 +1655,15 @@ def _reject_category(reason):
         return "השוק עוד ישן", "#e2b45f"
     return "אין נתונים", "#8b8a83"
 
+def section_header(title, help_key):
+    """כותרת סקציה עם ⓘ צמוד מימין"""
+    col_i, col_t = st.columns([1, 24], gap="small", vertical_alignment="center")
+    col_t.markdown(f'<div class="section-title" style="font-size:15px; margin:0">{title}</div>', unsafe_allow_html=True)
+    with col_i.popover("ⓘ"):
+        st.markdown(RADAR_HELP[help_key])
+
+# ---------- התצוגה ----------
+
 with tab_radar:
     st.markdown("""
     <style>
@@ -1681,3 +1692,88 @@ with tab_radar:
         require_vol = st.toggle("🔥 רק חברות שהשוק התעורר אליהן", value=True)
     with tgl_i.popover("ⓘ"):
         st.markdown(RADAR_HELP["volume_toggle"])
+
+    with st.spinner("סורק את השוק..."):
+        clusters = get_cluster_candidates()
+        finalists, rejected = ([], []) if clusters.empty else validate_clusters(clusters, require_vol)
+
+    if clusters.empty:
+        st.markdown('<div class="news-item">⚪ אין נתונים כרגע · OpenInsider לא זמין · נסה שוב בעוד כמה דקות</div>', unsafe_allow_html=True)
+    else:
+        n_checked = min(len(clusters), MAX_TICKERS_TO_VALIDATE)
+        n_final = len(finalists)
+        final_color = "#7fc796" if n_final else "#e07b72"
+
+        st.markdown(f'''
+        <div class="metric-card" style="display:flex; justify-content:center; align-items:center; gap:26px; padding:16px">
+            <span style="text-align:center">
+                <span class="metric-value" style="font-size:26px">{len(clusters)}</span><br>
+                <span class="metric-label">נסרקו</span>
+            </span>
+            <span style="color:#8b8a83; font-size:20px">←</span>
+            <span style="text-align:center">
+                <span class="metric-value" style="font-size:26px">{n_checked}</span><br>
+                <span class="metric-label">נבדקו</span>
+            </span>
+            <span style="color:#8b8a83; font-size:20px">←</span>
+            <span style="text-align:center">
+                <span class="metric-value" style="font-size:26px; color:{final_color}">{n_final}</span><br>
+                <span class="metric-label">ברדאר</span>
+            </span>
+        </div>
+        ''', unsafe_allow_html=True)
+
+        st.divider()
+
+        section_header("🎯 מניות הרדאר", "finalists")
+        if finalists:
+            in_portfolio = {s.upper() for s in selected_stocks}
+            for row in finalists:
+                val = row["total_value"]
+                val_str = f"${val/1e6:.1f}M" if val >= 1e6 else f"${val/1e3:.0f}K"
+                mcap_str = f'${row["mcap"]/1e9:.2f}B' if row["mcap"] >= 1e9 else f'${row["mcap"]/1e6:.0f}M'
+                roles = " · ".join(row["insider_roles"][:3]) or "אנשי פנים"
+                vol_badge = (f'<span class="badge-hold" style="margin-right:6px">🔥 פי {row["vol_ratio"]}</span>'
+                             if row["vol_ratio"] and row["vol_ratio"] >= VOLUME_SPIKE_RATIO else "")
+                mine = '<span class="badge-hold" style="margin-right:6px">בתיק שלך</span>' if row["ticker"] in in_portfolio else ""
+                st.markdown(f'''
+                <div class="metric-card" style="margin-bottom:10px; border-color:#2f4a38">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+                        <span style="font-size:18px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{row["ticker"]}</span>
+                        <span><span class="badge-buy">{row["unique_insiders"]} מנהלים · {val_str}</span>{vol_badge}{mine}</span>
+                    </div>
+                    <div style="color:#9a998f; font-size:12px; margin-bottom:4px">🏢 {row["company"]} · {mcap_str} · PEG {row["peg"]:.2f}</div>
+                    <div style="color:#c9c6bd; font-size:12px; margin-bottom:4px">👥 {roles} · {row["n_purchases"]} רכישות · אחרונה {row["latest_date"]}</div>
+                </div>
+                ''', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="news-item">⚪ אין מניות ברדאר כרגע · כיבוי המתג למעלה ירחיב את החיפוש</div>', unsafe_allow_html=True)
+
+        if rejected:
+            st.divider()
+            section_header(f"🚫 נפסלו ({len(rejected)})", "rejected")
+
+            from collections import Counter
+            cats = [_reject_category(r["reason"]) for r in rejected]
+            counts = Counter(c[0] for c in cats)
+            cat_colors = {c[0]: c[1] for c in cats}
+
+            pills = " ".join(
+                f'<span style="background:#1e1f24; border:0.5px solid #2e2f36; border-radius:14px; padding:5px 14px; font-size:12.5px; color:{cat_colors[name]}; white-space:nowrap">{name} · {cnt}</span>'
+                for name, cnt in counts.most_common()
+            )
+            st.markdown(f'<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:10px">{pills}</div>', unsafe_allow_html=True)
+
+            with st.expander("הרשימה המלאה"):
+                for r in rejected:
+                    cat_name, color = _reject_category(r["reason"])
+                    st.markdown(f'''
+                    <div class="news-item">
+                        <span style="color:#ece9e2; font-family:'JetBrains Mono',monospace">{r["ticker"]}</span>
+                        <span style="color:#9a998f"> · {r["unique_insiders"]} מנהלים</span>
+                        — <span style="color:{color}">{r["reason"]}</span>
+                    </div>
+                    ''', unsafe_allow_html=True)
+
+        if len(clusters) > MAX_TICKERS_TO_VALIDATE:
+            st.markdown(f'<div class="news-item" style="border:none">נבדקו לעומק {MAX_TICKERS_TO_VALIDATE} הקבוצות החזקות מתוך {len(clusters)}</div>', unsafe_allow_html=True)
