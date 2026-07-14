@@ -1653,9 +1653,31 @@ def _reject_category(reason):
         return "השוק עוד ישן", "#e2b45f"
     return "אין נתונים", "#8b8a83"
 
-def section_header(title, help_key):
-    """כותרת סקציה עם ⓘ צמוד"""
-    col_i, col_t = st.columns([1, 24], gap="small", vertical_alignment="center")
-    col_t.markdown(f'<div class="section-title" style="font-size:15px; margin:0">{title}</div>', unsafe_allow_html=True)
-    with col_i.popover("ⓘ"):
-        st.markdown(RADAR_HELP[help_key])
+with tab_radar:
+    st.markdown("""
+    <style>
+    [data-testid="stPopover"] button svg { display:none !important; }
+    [data-testid="stPopover"] button {
+        border-radius: 50% !important;
+        width: 26px; min-width: 26px !important;
+        height: 26px; min-height: 26px !important;
+        padding: 0 !important;
+        background: #1e1f24 !important;
+        border: 0.5px solid #2e2f36 !important;
+        color: #8b8a83 !important;
+    }
+    [data-testid="stPopover"] button:hover { color:#e2b45f !important; border-color:#4a3d24 !important; }
+    [data-testid="stPopover"] button p { font-size:13px !important; margin:0 !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    hdr_i, hdr_t = st.columns([1, 24], gap="small", vertical_alignment="center")
+    hdr_t.markdown('<h3 style="text-align:right; margin:0">📡 רדאר איתור מוקדם</h3>', unsafe_allow_html=True)
+    with hdr_i.popover("ⓘ"):
+        st.markdown(RADAR_HELP["main"])
+
+    tgl_i, tgl_col = st.columns([1, 24], gap="small", vertical_alignment="center")
+    with tgl_col:
+        require_vol = st.toggle("🔥 רק חברות שהשוק התעורר אליהן", value=True)
+    with tgl_i.popover("ⓘ"):
+        st.markdown(RADAR_HELP["volume_toggle"])
