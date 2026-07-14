@@ -1609,166 +1609,147 @@ def validate_clusters(clusters_df, require_volume=True):
         passed.append({**row.to_dict(), **f})
     return passed, rejected
 
+RADAR_HELP = {
+    "main": """**איך הרדאר עובד?**
+
+סריקה של כל השוק האמריקאי בשלושה שלבים:
+
+**1 · נסרקו** — חברות שבהן 2+ מנהלים בכירים קנו מניות של החברה שלהם בכסף פרטי ב-30 הימים האחרונים ($50K+ לעסקה). קנייה משותפת של מנהלים היא איתות חזק.
+
+**2 · נבדקו** — החזקות ביותר נבדקו מול שלושה פילטרים: שווי שוק עד $5B · PEG עד 1.5 · נפח מסחר חריג.
+
+**3 · ברדאר** — רק מי שעברה את כל הבדיקות. ברוב הימים הרדאר ריק — הוא בכוונה קפדני.
+
+מקורות: OpenInsider + Yahoo Finance · לא ייעוץ פיננסי""",
+    "volume_toggle": """**מתג דולק** — רק חברות שגם נפח המסחר בהן קפץ (פי 1.5 מהממוצע). איתות בשל, נדיר.
+
+**מתג כבוי** — גם חברות שהשוק עוד לא שם לב אליהן. איתור מוקדם באמת, יותר תוצאות.""",
+    "finalists": """**מנהלים קנו** — כמה אנשי פנים שונים רכשו, ובכמה כסף בסך הכול.
+
+**שווי שוק** — גודל החברה. עד $5B = קטנה/בינונית עם מקום לצמוח.
+
+**PEG** — מחיר המניה ביחס לקצב הצמיחה. עד 1.5 = תמחור הוגן.
+
+**🔥** — נפח המסחר קפץ מעל הממוצע. השוק מתעורר.""",
+    "rejected": """כל חברה שנפסלה, מקובצת לפי הסיבה:
+
+**השוק עוד ישן** — עברה הכול חוץ מנפח. המנהלים קנו, השוק עוד לא שם לב. אלה המעניינות למעקב — כיבוי המתג למעלה יציג אותן.
+
+**מניה יקרה** — PEG מעל 1.5.
+
+**חברה גדולה מדי** — שווי שוק מעל $5B.
+
+**אין נתון PEG** — אין כיסוי אנליסטים, אי אפשר לוודא תמחור.""",
+}
+
 def _reject_category(reason):
-    """ממיין סיבת פסילה לקטגוריה + הסבר בשפה פשוטה"""
     if "PEG" in reason and "אין נתון" in reason:
-        return "אין נתון PEG", "#8b8a83", "חברות קטנות בלי כיסוי אנליסטים — אי אפשר לוודא שהמחיר הוגן"
+        return "אין נתון PEG", "#8b8a83"
     if "PEG" in reason:
-        return "מניה יקרה", "#e07b72", "המחיר גבוה יחסית לקצב הצמיחה (PEG מעל 1.5)"
+        return "מניה יקרה", "#e07b72"
     if "גדול מדי" in reason:
-        return "חברה גדולה מדי", "#e07b72", "שווי שוק מעל $5B — כבר לא סיפור של איתור מוקדם"
+        return "חברה גדולה מדי", "#e07b72"
     if "נפח" in reason:
-        return "השוק עוד ישן", "#e2b45f", "המנהלים קנו, אבל נפח המסחר עדיין רגיל — שווה מעקב"
-    return "אין נתונים", "#8b8a83", "Yahoo Finance לא מכיר את המניה"
+        return "השוק עוד ישן", "#e2b45f"
+    return "אין נתונים", "#8b8a83"
+
+def section_header(title, help_key):
+    """כותרת סקציה עם כפתור ⓘ שפותח חלונית הסבר"""
+    col_t, col_i = st.columns([12, 1])
+    col_t.markdown(f'<div class="section-title" style="font-size:15px; margin-top:6px">{title}</div>', unsafe_allow_html=True)
+    with col_i.popover("ⓘ", use_container_width=False):
+        st.markdown(RADAR_HELP[help_key])
 
 with tab_radar:
-    st.markdown('<h3 style="text-align:right">📡 רדאר איתור מוקדם</h3>', unsafe_allow_html=True)
+    hdr_t, hdr_i = st.columns([12, 1])
+    hdr_t.markdown('<h3 style="text-align:right; margin-bottom:0">📡 רדאר איתור מוקדם</h3>', unsafe_allow_html=True)
+    with hdr_i.popover("ⓘ"):
+        st.markdown(RADAR_HELP["main"])
 
-    st.markdown('''
-    <div class="analysis-card" style="font-size:14px; line-height:1.9">
-    <b style="color:#e2b45f">מה הרדאר עושה:</b> סורק את כל השוק האמריקאי ומחפש חברות שבהן
-    <b>כמה מנהלים בכירים קנו מניות של החברה שלהם — בכסף הפרטי שלהם</b>.
-    כשמנכ"ל וסמנכ"ל כספים קונים ביחד, הם כנראה יודעים משהו שהשוק עוד לא מתמחר.
-    כל חברה כזו עוברת בדיקות איכות, ורק מי שעוברת את כולן נכנסת לרדאר.
-    </div>
-    ''', unsafe_allow_html=True)
+    tgl_col, tgl_i = st.columns([12, 1])
+    with tgl_col:
+        require_vol = st.toggle("🔥 רק חברות שהשוק התעורר אליהן", value=True)
+    with tgl_i.popover("ⓘ"):
+        st.markdown(RADAR_HELP["volume_toggle"])
 
-    require_vol = st.toggle(
-        "🔥 הצג רק חברות שהשוק כבר התחיל להתעורר אליהן",
-        value=True,
-    )
-    st.markdown('''
-    <div style="color:#8b8a83; font-size:12px; text-align:right; margin:-6px 0 12px">
-    מתג דולק = איתות בשל אבל נדיר (המנהלים קנו + נפח המסחר קפץ) · מתג כבוי = איתור מוקדם באמת, לפני שהשוק שם לב — יותר תוצאות
-    </div>
-    ''', unsafe_allow_html=True)
-
-    with st.spinner("סורק את השוק ומאמת נתונים (עד דקה בטעינה ראשונה)..."):
+    with st.spinner("סורק את השוק..."):
         clusters = get_cluster_candidates()
         finalists, rejected = ([], []) if clusters.empty else validate_clusters(clusters, require_vol)
 
     if clusters.empty:
-        st.markdown('<div class="news-item">⚪ הסריקה לא החזירה תוצאות — כנראה ש-OpenInsider לא זמין כרגע. נסה לרענן בעוד כמה דקות.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="news-item">⚪ אין נתונים כרגע · OpenInsider לא זמין · נסה שוב בעוד כמה דקות</div>', unsafe_allow_html=True)
     else:
         n_checked = min(len(clusters), MAX_TICKERS_TO_VALIDATE)
+        n_final = len(finalists)
+        final_color = "#7fc796" if n_final else "#e07b72"
 
-        # ---------- המשפך: שלושה שלבים עם חצים ----------
-        c1, a1, c2, a2, c3 = st.columns([1, 0.1, 1, 0.1, 1], gap="small")
-        arrow_html = '<div style="font-size:24px;color:#8b8a83;text-align:center;padding-top:52px">←</div>'
-
-        c1.markdown(f'''
-        <div class="metric-card" style="min-height:130px">
-            <div class="metric-label">שלב 1 · סריקת השוק</div>
-            <div class="metric-value">{len(clusters)}</div>
-            <div style="font-size:12px;color:#9a998f;line-height:1.6">
-                חברות שבהן {CLUSTER_MIN_INSIDERS}+ מנהלים קנו מניות ב-{CLUSTER_WINDOW_DAYS} הימים האחרונים
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
-        a1.markdown(arrow_html, unsafe_allow_html=True)
-
-        c2.markdown(f'''
-        <div class="metric-card" style="min-height:130px">
-            <div class="metric-label">שלב 2 · בדיקות איכות</div>
-            <div class="metric-value">{n_checked}</div>
-            <div style="font-size:12px;color:#9a998f;line-height:1.6">
-                החזקות ביותר נבדקו מול 3 פילטרים: גודל החברה, תמחור הוגן, נפח מסחר
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
-        a2.markdown(arrow_html, unsafe_allow_html=True)
-
-        final_color = "#7fc796" if finalists else "#8b8a83"
-        final_border = "#2f4a38" if finalists else "#2e2f36"
-        c3.markdown(f'''
-        <div class="metric-card" style="min-height:130px; border-color:{final_border}">
-            <div class="metric-label">התוצאה · מניות הרדאר</div>
-            <div class="metric-value" style="color:{final_color}">{len(finalists)}</div>
-            <div style="font-size:12px;color:#9a998f;line-height:1.6">
-                עברו את כל הבדיקות — אלה המניות ששוות מבט עכשיו
-            </div>
+        st.markdown(f'''
+        <div class="metric-card" style="display:flex; justify-content:center; align-items:center; gap:26px; padding:16px">
+            <span style="text-align:center">
+                <span class="metric-value" style="font-size:26px">{len(clusters)}</span><br>
+                <span class="metric-label">נסרקו</span>
+            </span>
+            <span style="color:#8b8a83; font-size:20px">←</span>
+            <span style="text-align:center">
+                <span class="metric-value" style="font-size:26px">{n_checked}</span><br>
+                <span class="metric-label">נבדקו</span>
+            </span>
+            <span style="color:#8b8a83; font-size:20px">←</span>
+            <span style="text-align:center">
+                <span class="metric-value" style="font-size:26px; color:{final_color}">{n_final}</span><br>
+                <span class="metric-label">ברדאר</span>
+            </span>
         </div>
         ''', unsafe_allow_html=True)
 
         st.divider()
 
-        # ---------- התוצאה ----------
+        section_header("🎯 מניות הרדאר", "finalists")
         if finalists:
-            st.markdown('<div class="section-title">🎯 מניות הרדאר — עברו את כל הבדיקות</div>', unsafe_allow_html=True)
-            st.markdown('''
-            <div style="color:#8b8a83; font-size:12px; text-align:right; margin-bottom:10px">
-            מדריך קצר: שווי שוק = גודל החברה · PEG = מחיר ביחס לצמיחה (עד 1.5 = הוגן) · 🔥 = נפח מסחר קופץ
-            </div>
-            ''', unsafe_allow_html=True)
             in_portfolio = {s.upper() for s in selected_stocks}
             for row in finalists:
                 val = row["total_value"]
                 val_str = f"${val/1e6:.1f}M" if val >= 1e6 else f"${val/1e3:.0f}K"
                 mcap_str = f'${row["mcap"]/1e9:.2f}B' if row["mcap"] >= 1e9 else f'${row["mcap"]/1e6:.0f}M'
                 roles = " · ".join(row["insider_roles"][:3]) or "אנשי פנים"
-                vol_badge = (f'<span class="badge-hold" style="margin-right:6px">🔥 נפח פי {row["vol_ratio"]}</span>'
+                vol_badge = (f'<span class="badge-hold" style="margin-right:6px">🔥 פי {row["vol_ratio"]}</span>'
                              if row["vol_ratio"] and row["vol_ratio"] >= VOLUME_SPIKE_RATIO else "")
                 mine = '<span class="badge-hold" style="margin-right:6px">בתיק שלך</span>' if row["ticker"] in in_portfolio else ""
                 st.markdown(f'''
                 <div class="metric-card" style="margin-bottom:10px; border-color:#2f4a38">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
                         <span style="font-size:18px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{row["ticker"]}</span>
-                        <span><span class="badge-buy">{row["unique_insiders"]} מנהלים קנו · {val_str}</span>{vol_badge}{mine}</span>
+                        <span><span class="badge-buy">{row["unique_insiders"]} מנהלים · {val_str}</span>{vol_badge}{mine}</span>
                     </div>
-                    <div style="color:#9a998f; font-size:12px; margin-bottom:4px">🏢 {row["company"]} · שווי שוק {mcap_str} · PEG {row["peg"]:.2f}</div>
-                    <div style="color:#c9c6bd; font-size:12px; margin-bottom:4px">👥 {roles} · {row["n_purchases"]} רכישות</div>
-                    <div style="color:#8b8a83; font-size:11px">רכישה אחרונה: {row["latest_date"]}</div>
+                    <div style="color:#9a998f; font-size:12px; margin-bottom:4px">🏢 {row["company"]} · {mcap_str} · PEG {row["peg"]:.2f}</div>
+                    <div style="color:#c9c6bd; font-size:12px; margin-bottom:4px">👥 {roles} · {row["n_purchases"]} רכישות · אחרונה {row["latest_date"]}</div>
                 </div>
                 ''', unsafe_allow_html=True)
         else:
-            st.markdown('''
-            <div class="analysis-card" style="border-color:#4a3d24">
-            <b style="color:#e2b45f">הרדאר ריק כרגע — וזה תקין.</b><br>
-            הרדאר בכוונה קפדני: ברוב הימים אף חברה לא עוברת את כל הבדיקות,
-            ודווקא בגלל זה כשמשהו כן עובר — הוא שווה תשומת לב אמיתית.<br>
-            💡 רוצה לראות יותר? כבה את המתג למעלה ותקבל גם חברות שהמנהלים קנו בהן אבל השוק עוד לא התעורר.
-            </div>
-            ''', unsafe_allow_html=True)
+            st.markdown('<div class="news-item">⚪ אין מניות ברדאר כרגע · כיבוי המתג למעלה ירחיב את החיפוש</div>', unsafe_allow_html=True)
 
-        # ---------- למה השאר נפסלו ----------
         if rejected:
             st.divider()
-            st.markdown('<div class="section-title">🚫 למה שאר החברות נפסלו?</div>', unsafe_allow_html=True)
+            section_header(f"🚫 נפסלו ({len(rejected)})", "rejected")
 
             from collections import Counter
             cats = [_reject_category(r["reason"]) for r in rejected]
             counts = Counter(c[0] for c in cats)
-            cat_info = {c[0]: (c[1], c[2]) for c in cats}
+            cat_colors = {c[0]: c[1] for c in cats}
 
-            for cat_name, cnt in counts.most_common():
-                color, desc = cat_info[cat_name]
-                st.markdown(f'''
-                <div class="news-item">
-                    <span style="color:{color}; font-weight:500">{cat_name}</span>
-                    <span style="color:#ece9e2; font-family:'JetBrains Mono',monospace"> · {cnt} חברות</span>
-                    <span style="color:#8b8a83"> — {desc}</span>
-                </div>
-                ''', unsafe_allow_html=True)
+            pills = " ".join(
+                f'<span style="background:#1e1f24; border:0.5px solid #2e2f36; border-radius:14px; padding:5px 14px; font-size:12.5px; color:{cat_colors[name]}; white-space:nowrap">{name} · {cnt}</span>'
+                for name, cnt in counts.most_common()
+            )
+            st.markdown(f'<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:10px">{pills}</div>', unsafe_allow_html=True)
 
-            vol_only = [r for r in rejected if "נפח" in r["reason"]]
-            if require_vol and vol_only:
-                st.markdown(f'''
-                <div class="analysis-card" style="font-size:12.5px; margin-top:10px; border-color:#4a3d24">
-                🕐 <b style="color:#e2b45f">שים לב:</b> {len(vol_only)} חברות נפלו <b>רק</b> על נפח שקט —
-                המנהלים שם כבר קנו, השוק פשוט עוד לא שם לב. כיבוי המתג למעלה יציג אותן.
-                </div>
-                ''', unsafe_allow_html=True)
-
-            with st.expander("📋 הרשימה המלאה — כל חברה והסיבה שלה"):
+            with st.expander("הרשימה המלאה"):
                 for r in rejected:
-                    cat_name, color, _ = _reject_category(r["reason"])
+                    cat_name, color = _reject_category(r["reason"])
                     st.markdown(f'''
                     <div class="news-item">
                         <span style="color:#ece9e2; font-family:'JetBrains Mono',monospace">{r["ticker"]}</span>
-                        <span style="color:#9a998f"> · {r["unique_insiders"]} מנהלים קנו</span>
+                        <span style="color:#9a998f"> · {r["unique_insiders"]} מנהלים</span>
                         — <span style="color:{color}">{r["reason"]}</span>
                     </div>
                     ''', unsafe_allow_html=True)
-
-        if len(clusters) > MAX_TICKERS_TO_VALIDATE:
-            st.markdown(f'<div class="news-item" style="border:none">נבדקו לעומק {MAX_TICKERS_TO_VALIDATE} הקבוצות החזקות מתוך {len(clusters)} שנמצאו</div>', unsafe_allow_html=True)
