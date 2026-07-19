@@ -86,17 +86,17 @@ h1, h2, h3 {
 }
 
 .metric-label {
-    font-size: 12px;
-    color: #8b8a83;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
     letter-spacing: 0.04em;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-xs);
     font-family: 'JetBrains Mono', monospace;
 }
 
 .metric-value {
-    font-size: 24px;
+    font-size: var(--text-xl);
     font-weight: 600;
-    color: #ece9e2;
+    color: var(--text-primary);
     font-family: 'JetBrains Mono', monospace;
 }
 
@@ -128,11 +128,11 @@ h1, h2, h3 {
 }
 
 .section-title {
-    font-size: 13px;
+    font-size: var(--text-base);
     font-weight: 500;
-    color: #e2b45f;
+    color: var(--accent);
     letter-spacing: 0.05em;
-    margin: 4px 0 10px;
+    margin: var(--space-xs) 0 var(--space-md);
     text-align: right;
 }
 
