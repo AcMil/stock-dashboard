@@ -27,6 +27,32 @@ st.set_page_config(page_title="דשבורד מניות", page_icon="📈", layou
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root {
+    /* מרווחים — כפולות של 4 בלבד */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+
+    /* גדלי טקסט — סקאלה מצומצמת */
+    --text-sm: 12px;
+    --text-base: 14px;
+    --text-lg: 18px;
+    --text-xl: 24px;
+
+    /* צבעים */
+    --bg: #17181c;
+    --card: #1e1f24;
+    --border: #2e2f36;
+    --text-primary: #ece9e2;
+    --text-secondary: #9a998f;
+    --text-muted: #8b8a83;
+    --accent: #e2b45f;
+
+    /* פינות */
+    --radius: 10px;
+}
 
 html, body, [class*="css"] {
     direction: rtl;
