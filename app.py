@@ -115,15 +115,14 @@ h1, h2, h3 {
     font-family: 'Heebo', sans-serif;
     font-size: var(--text-base);
 }
-.badge-buy  { background:#1e2d23; color:#7fc796; border:1px solid #2f4a38; padding:4px 14px; border-radius:6px; font-size:12.5px; font-weight:500; }
-.badge-hold { background:#33291a; color:#e2b45f; border:1px solid #4a3d24; padding:4px 14px; border-radius:6px; font-size:12.5px; font-weight:500; }
-.badge-sell { background:#33201f; color:#e07b72; border:1px solid #4a2e2c; padding:4px 14px; border-radius:6px; font-size:12.5px; font-weight:500; }
-
+.badge-buy  { background:#1e2d23; color:#7fc796; border:1px solid #2f4a38; padding:var(--space-xs) var(--space-md); border-radius:6px; font-size:var(--text-sm); font-weight:500; }
+.badge-hold { background:#33291a; color:var(--accent); border:1px solid #4a3d24; padding:var(--space-xs) var(--space-md); border-radius:6px; font-size:var(--text-sm); font-weight:500; }
+.badge-sell { background:#33201f; color:#e07b72; border:1px solid #4a2e2c; padding:var(--space-xs) var(--space-md); border-radius:6px; font-size:var(--text-sm); font-weight:500; }
 .news-item {
-    padding: 9px 0;
+    padding: var(--space-sm) 0;
     border-bottom: 0.5px solid rgba(236,233,226,0.08);
     color: #c9c6bd;
-    font-size: 13.5px;
+    font-size: var(--text-base);
     text-align: right;
 }
 
