@@ -1688,18 +1688,26 @@ def section_header(title, help_key):
 
 # ---------- התצוגה ----------
 
-with tab_radar:
-    st.markdown("""
-    <style>
-    [data-testid="stPopover"] button svg { display:none !important; }
-    [data-testid="stPopover"] button {
-        border-radius: 50% !important;
-        width: 26px; min-width: 26px !important;
-        height: 26px; min-height: 26px !important;
-        padding: 0 !important;
-        background: #1e1f24 !important;
-        border: 0.5px solid #2e2f36 !important;
-        color: #8b8a83 !important;
+<style>
+button[kind="secondary"] svg { display:none !important; }
+button[kind="secondary"] {
+    border-radius: 50% !important;
+    width: 26px; min-width: 26px !important;
+    height: 26px; min-height: 26px !important;
+    padding: 0 !important;
+    background: var(--card) !important;
+    border: 0.5px solid var(--border) !important;
+    color: var(--text-muted) !important;
+}
+button[kind="secondary"]:hover { 
+    color: var(--accent) !important; 
+    border-color: #4a3d24 !important; 
+}
+button[kind="secondary"] p { 
+    font-size: var(--text-sm) !important; 
+    margin: 0 !important; 
+}
+</style>
     }
     [data-testid="stPopover"] button:hover { color:#e2b45f !important; border-color:#4a3d24 !important; }
     [data-testid="stPopover"] button p { font-size:13px !important; margin:0 !important; }
