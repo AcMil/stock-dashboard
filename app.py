@@ -84,7 +84,6 @@ h1, h2, h3 {
     text-align: right;
     width: 100%;
 }
-}
 
 .metric-label {
     font-size: 12px;
@@ -105,18 +104,17 @@ h1, h2, h3 {
 .metric-dn { color: #e07b72; font-size: 13px; font-family: 'JetBrains Mono', monospace; }
 
 .analysis-card {
-    background: #1e1f24;
-    border: 0.5px solid #2e2f36;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 12px;
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-md);
     text-align: right;
     color: #c9c6bd;
     line-height: 1.7;
     font-family: 'Heebo', sans-serif;
-    font-size: 14.5px;
+    font-size: var(--text-base);
 }
-
 .badge-buy  { background:#1e2d23; color:#7fc796; border:1px solid #2f4a38; padding:4px 14px; border-radius:6px; font-size:12.5px; font-weight:500; }
 .badge-hold { background:#33291a; color:#e2b45f; border:1px solid #4a3d24; padding:4px 14px; border-radius:6px; font-size:12.5px; font-weight:500; }
 .badge-sell { background:#33201f; color:#e07b72; border:1px solid #4a2e2c; padding:4px 14px; border-radius:6px; font-size:12.5px; font-weight:500; }
