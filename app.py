@@ -77,12 +77,13 @@ h1, h2, h3 {
 }
 
 .metric-card {
-    background: #1e1f24;
-    border: 0.5px solid #2e2f36;
-    border-radius: 10px;
-    padding: 14px 16px;
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-lg);
     text-align: right;
     width: 100%;
+}
 }
 
 .metric-label {
