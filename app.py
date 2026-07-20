@@ -1688,6 +1688,7 @@ def section_header(title, help_key):
 
 # ---------- התצוגה ----------
 
+st.markdown("""
 <style>
 button[kind="secondary"] svg { display:none !important; }
 button[kind="secondary"] {
@@ -1708,6 +1709,7 @@ button[kind="secondary"] p {
     margin: 0 !important; 
 }
 </style>
+""", unsafe_allow_html=True)
     }
     [data-testid="stPopover"] button:hover { color:#e2b45f !important; border-color:#4a3d24 !important; }
     [data-testid="stPopover"] button p { font-size:13px !important; margin:0 !important; }
