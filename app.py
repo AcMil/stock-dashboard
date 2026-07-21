@@ -1678,39 +1678,25 @@ def section_header(title, help_key):
 
 # ---------- התצוגה ----------
 
-st.markdown("""
+with tab_radar:
+    st.markdown("""
 <style>
 button[kind="secondary"] svg { display:none !important; }
-button[kind="secondary"] {
-    border-radius: 50% !important;
-    width: 26px; min-width: 26px !important;
-    height: 26px; min-height: 26px !important;
-    padding: 0 !important;
-    background: var(--card) !important;
-    border: 0.5px solid var(--border) !important;
-    color: var(--text-muted) !important;
-}
-button[kind="secondary"]:hover {
-    color: var(--accent) !important;
-    border-color: #4a3d24 !important;
-}
-button[kind="secondary"] p {
-    font-size: var(--text-sm) !important;
-    margin: 0 !important;
-}
+button[kind="secondary"] { border-radius:50% !important; width:26px; min-width:26px !important; height:26px; min-height:26px !important; padding:0 !important; background:var(--card) !important; border:0.5px solid var(--border) !important; color:var(--text-muted) !important; }
+button[kind="secondary"]:hover { color:var(--accent) !important; border-color:#4a3d24 !important; }
+button[kind="secondary"] p { font-size:var(--text-sm) !important; margin:0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-with tab_radar:
     hdr_i, hdr_t = st.columns([1, 24], gap="small", vertical_alignment="center")
-    hdr_t.markdown('<h3 style="text-align:right; margin:0">📡 רדאר איתור מוקדם</h3>', unsafe_allow_html=True)
-    with hdr_i.popover("ⓘ"):
+    hdr_t.markdown('<h3 style="text-align:right; margin:0">רדאר איתור מוקדם</h3>', unsafe_allow_html=True)
+    with hdr_i.popover("i"):
         st.markdown(RADAR_HELP["main"])
 
     tgl_i, tgl_col = st.columns([1, 24], gap="small", vertical_alignment="center")
     with tgl_col:
-        require_vol = st.toggle("🔥 רק חברות שהשוק התעורר אליהן", value=True)
-    with tgl_i.popover("ⓘ"):
+        require_vol = st.toggle("רק חברות שהשוק התעורר אליהן", value=True)
+    with tgl_i.popover("i"):
         st.markdown(RADAR_HELP["volume_toggle"])
 
     with st.spinner("סורק את השוק..."):
@@ -1718,7 +1704,7 @@ with tab_radar:
         finalists, rejected = ([], []) if clusters.empty else validate_clusters(clusters, require_vol)
 
     if clusters.empty:
-        st.markdown('<div class="news-item">⚪ אין נתונים כרגע · OpenInsider לא זמין · נסה שוב בעוד כמה דקות</div>', unsafe_allow_html=True)
+        st.markdown('<div class="news-item">אין נתונים כרגע - נסה שוב בעוד כמה דקות</div>', unsafe_allow_html=True)
     else:
         n_checked = min(len(clusters), MAX_TICKERS_TO_VALIDATE)
         n_final = len(finalists)
@@ -1730,12 +1716,12 @@ with tab_radar:
                 <span class="metric-value" style="font-size:26px">{len(clusters)}</span><br>
                 <span class="metric-label">נסרקו</span>
             </span>
-            <span style="color:#8b8a83; font-size:20px">←</span>
+            <span style="color:#8b8a83; font-size:20px">&larr;</span>
             <span style="text-align:center">
                 <span class="metric-value" style="font-size:26px">{n_checked}</span><br>
                 <span class="metric-label">נבדקו</span>
             </span>
-            <span style="color:#8b8a83; font-size:20px">←</span>
+            <span style="color:#8b8a83; font-size:20px">&larr;</span>
             <span style="text-align:center">
                 <span class="metric-value" style="font-size:26px; color:{final_color}">{n_final}</span><br>
                 <span class="metric-label">ברדאר</span>
@@ -1745,33 +1731,33 @@ with tab_radar:
 
         st.divider()
 
-        section_header("🎯 מניות הרדאר", "finalists")
+        section_header("מניות הרדאר", "finalists")
         if finalists:
             in_portfolio = {s.upper() for s in selected_stocks}
             for row in finalists:
                 val = row["total_value"]
                 val_str = f"${val/1e6:.1f}M" if val >= 1e6 else f"${val/1e3:.0f}K"
                 mcap_str = f'${row["mcap"]/1e9:.2f}B' if row["mcap"] >= 1e9 else f'${row["mcap"]/1e6:.0f}M'
-                roles = " · ".join(row["insider_roles"][:3]) or "אנשי פנים"
-                vol_badge = (f'<span class="badge-hold" style="margin-right:6px">🔥 פי {row["vol_ratio"]}</span>'
+                roles = " - ".join(row["insider_roles"][:3]) or "אנשי פנים"
+                vol_badge = (f'<span class="badge-hold" style="margin-right:6px">נפח פי {row["vol_ratio"]}</span>'
                              if row["vol_ratio"] and row["vol_ratio"] >= VOLUME_SPIKE_RATIO else "")
                 mine = '<span class="badge-hold" style="margin-right:6px">בתיק שלך</span>' if row["ticker"] in in_portfolio else ""
                 st.markdown(f'''
                 <div class="metric-card" style="margin-bottom:10px; border-color:#2f4a38">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
                         <span style="font-size:18px; color:#ece9e2; font-family:'JetBrains Mono',monospace">{row["ticker"]}</span>
-                        <span><span class="badge-buy">{row["unique_insiders"]} מנהלים · {val_str}</span>{vol_badge}{mine}</span>
+                        <span><span class="badge-buy">{row["unique_insiders"]} מנהלים - {val_str}</span>{vol_badge}{mine}</span>
                     </div>
-                    <div style="color:#9a998f; font-size:12px; margin-bottom:4px">🏢 {row["company"]} · {mcap_str} · PEG {row["peg"]:.2f}</div>
-                    <div style="color:#c9c6bd; font-size:12px; margin-bottom:4px">👥 {roles} · {row["n_purchases"]} רכישות · אחרונה {row["latest_date"]}</div>
+                    <div style="color:#9a998f; font-size:12px; margin-bottom:4px">{row["company"]} - {mcap_str} - PEG {row["peg"]:.2f}</div>
+                    <div style="color:#c9c6bd; font-size:12px; margin-bottom:4px">{roles} - {row["n_purchases"]} רכישות - אחרונה {row["latest_date"]}</div>
                 </div>
                 ''', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="news-item">⚪ אין מניות ברדאר כרגע · כיבוי המתג למעלה ירחיב את החיפוש</div>', unsafe_allow_html=True)
+            st.markdown('<div class="news-item">אין מניות ברדאר כרגע - כיבוי המתג ירחיב את החיפוש</div>', unsafe_allow_html=True)
 
         if rejected:
             st.divider()
-            section_header(f"🚫 נפסלו ({len(rejected)})", "rejected")
+            section_header(f"נפסלו ({len(rejected)})", "rejected")
 
             from collections import Counter
             cats = [_reject_category(r["reason"]) for r in rejected]
@@ -1779,7 +1765,7 @@ with tab_radar:
             cat_colors = {c[0]: c[1] for c in cats}
 
             pills = " ".join(
-                f'<span style="background:#1e1f24; border:0.5px solid #2e2f36; border-radius:14px; padding:5px 14px; font-size:12.5px; color:{cat_colors[name]}; white-space:nowrap">{name} · {cnt}</span>'
+                f'<span style="background:#1e1f24; border:0.5px solid #2e2f36; border-radius:14px; padding:5px 14px; font-size:12px; color:{cat_colors[name]}; white-space:nowrap">{name} - {cnt}</span>'
                 for name, cnt in counts.most_common()
             )
             st.markdown(f'<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:10px">{pills}</div>', unsafe_allow_html=True)
@@ -1790,10 +1776,10 @@ with tab_radar:
                     st.markdown(f'''
                     <div class="news-item">
                         <span style="color:#ece9e2; font-family:'JetBrains Mono',monospace">{r["ticker"]}</span>
-                        <span style="color:#9a998f"> · {r["unique_insiders"]} מנהלים</span>
-                        — <span style="color:{color}">{r["reason"]}</span>
+                        <span style="color:#9a998f"> - {r["unique_insiders"]} מנהלים</span>
+                        - <span style="color:{color}">{r["reason"]}</span>
                     </div>
                     ''', unsafe_allow_html=True)
 
         if len(clusters) > MAX_TICKERS_TO_VALIDATE:
-            st.markdown(f'<div class="news-item" style="border:none">נבדקו לעומק {MAX_TICKERS_TO_VALIDATE} הקבוצות החזקות מתוך {len(clusters)}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="news-item" style="border:none">נבדקו {MAX_TICKERS_TO_VALIDATE} הקבוצות החזקות מתוך {len(clusters)}</div>', unsafe_allow_html=True)
