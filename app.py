@@ -190,12 +190,6 @@ h1, h2, h3 {
 [data-testid="stSidebar"] {
     background-color: #17181c !important;
     border-left: 1px solid #2a2b31;
-}
-
-[data-testid="stMetricValue"] { color: #ece9e2 !important; }
-[data-testid="stMetricDelta"] { color: #7fc796 !important; }
-</style>
-""", unsafe_allow_html=True)
 
 st.markdown('''
 <h1 style="text-align:right; font-size:clamp(1rem, 4vw, 2.2rem); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
@@ -1700,22 +1694,18 @@ button[kind="secondary"] {
     border: 0.5px solid var(--border) !important;
     color: var(--text-muted) !important;
 }
-button[kind="secondary"]:hover { 
-    color: var(--accent) !important; 
-    border-color: #4a3d24 !important; 
+button[kind="secondary"]:hover {
+    color: var(--accent) !important;
+    border-color: #4a3d24 !important;
 }
-button[kind="secondary"] p { 
-    font-size: var(--text-sm) !important; 
-    margin: 0 !important; 
+button[kind="secondary"] p {
+    font-size: var(--text-sm) !important;
+    margin: 0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
-    }
-    [data-testid="stPopover"] button:hover { color:#e2b45f !important; border-color:#4a3d24 !important; }
-    [data-testid="stPopover"] button p { font-size:13px !important; margin:0 !important; }
-    </style>
-    """, unsafe_allow_html=True)
 
+with tab_radar:
     hdr_i, hdr_t = st.columns([1, 24], gap="small", vertical_alignment="center")
     hdr_t.markdown('<h3 style="text-align:right; margin:0">📡 רדאר איתור מוקדם</h3>', unsafe_allow_html=True)
     with hdr_i.popover("ⓘ"):
