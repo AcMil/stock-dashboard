@@ -564,7 +564,7 @@ def fear_greed_label(score):
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def sec_cik_map():
-    """מיפוי טיקר → מספר CIK (מזהה חברה ב-SEC)"""
+   """מיפוי טיקר -> מספר CIK (מזהה חברה ב-SEC)"""
     try:
         r = requests.get("https://www.sec.gov/files/company_tickers.json",
                          headers=SEC_HEADERS, timeout=20)
