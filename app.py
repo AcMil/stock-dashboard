@@ -191,6 +191,13 @@ h1, h2, h3 {
     background-color: #17181c !important;
     border-left: 1px solid #2a2b31;
 
+    }
+
+[data-testid="stMetricValue"] { color: #ece9e2 !important; }
+[data-testid="stMetricDelta"] { color: #7fc796 !important; }
+</style>
+""", unsafe_allow_html=True)
+
 st.markdown('''
 <h1 style="text-align:right; font-size:clamp(1rem, 4vw, 2.2rem); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
 📈 דשבורד מניות — ניתוח יומי
@@ -564,7 +571,7 @@ def fear_greed_label(score):
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def sec_cik_map():
-   """מיפוי טיקר -> מספר CIK (מזהה חברה ב-SEC)"""
+    """מיפוי טיקר -> מספר CIK (מזהה חברה ב-SEC)"""
     try:
         r = requests.get("https://www.sec.gov/files/company_tickers.json",
                          headers=SEC_HEADERS, timeout=20)
