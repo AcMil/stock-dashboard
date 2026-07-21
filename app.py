@@ -1670,7 +1670,7 @@ def _reject_category(reason):
     return "אין נתונים", "#8b8a83"
 
 def section_header(title, help_key):
-    """כותרת סקציה עם ⓘ צמוד מימין"""
+    """כותרת סקציה עם סימן עזרה"""
     col_i, col_t = st.columns([1, 24], gap="small", vertical_alignment="center")
     col_t.markdown(f'<div class="section-title" style="font-size:15px; margin:0">{title}</div>', unsafe_allow_html=True)
     with col_i.popover("ⓘ"):
