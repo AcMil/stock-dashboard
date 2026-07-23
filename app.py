@@ -3,6 +3,7 @@ import pandas as pd
 import yfinance as yf
 import requests
 import anthropic
+import streamlit_shadcn_ui as ui
 import os
 import smtplib
 import time
@@ -403,15 +404,18 @@ with tab_prices:
         for i, stock in enumerate(row_stocks):
             price, change = get_stock_info(stock)
             if price:
-                delta_class = "metric-up" if change >= 0 else "metric-dn"
                 arrow = "▲" if change >= 0 else "▼"
-                cols[i].markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">{stock}</div>
-                    <div class="metric-value">${price}</div>
-                    <div class="{delta_class}">{arrow} {change}%</div>
-                </div>
-                """, unsafe_allow_html=True)
+                with cols[i]:
+                    ui.metric_card(
+                        title=stock,
+                        content=f"${price}",
+                        description=f"{arrow} {abs(change)}%",
+                        key=f"metric_{stock}"
+                    )
+
+    st.divider()
+
+    st.divider()
 
     st.divider()
 
