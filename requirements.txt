@@ -5,3 +5,4 @@ anthropic
 pandas
 plotly
 lxml
+streamlit-shadcn-ui
