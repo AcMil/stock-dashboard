@@ -410,6 +410,7 @@ with tab_prices:
                         title=stock,
                         content=f"${price}",
                         description=f"{arrow} {abs(change)}%",
+description_color="green" if change >= 0 else "red",
                         key=f"metric_{stock}"
                     )
 
